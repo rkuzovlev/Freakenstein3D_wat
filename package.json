@@ -1,0 +1,21 @@
+{
+  "name": "wasm_game",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "./node_modules/.bin/wat2wasm src/game.wat -o src/game.wasm --enable-multi-memory && node src/binary_pack.mjs",
+    "start": "./node_modules/.bin/http-server -p 8888 src/"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "http-server": "^14.1.1",
+    "nan": "^2.22.0",
+    "wabt": "^1.0.36",
+    "canvas": "^2.11.2"
+  },
+  "dependencies": {
+  }
+}
