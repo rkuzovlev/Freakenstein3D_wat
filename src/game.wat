@@ -173,40 +173,14 @@
                         ;; move ix by posX
                         local.get $ix
                         global.get $posX
-                        i32.add
                         global.get $cw
-                        i32.rem_s
-                        ;; have to change negative x offset to positive by cw - ix
-                        local.set $tmp
-                        local.get $tmp
-                        i32.const 0
-                        i32.lt_s
-                        if
-                            global.get $cw
-                            local.get $tmp
-                            i32.add
-                            local.set $tmp
-                        end
-                        local.get $tmp
+                        call $move_pattern_by_offset
 
                         ;; move iy by posY
                         local.get $iy
                         global.get $posY
-                        i32.add
                         global.get $ch
-                        i32.rem_s
-                        ;; have to change negative y offset to positive by ch - iy
-                        local.set $tmp
-                        local.get $tmp
-                        i32.const 0
-                        i32.lt_s
-                        if
-                            global.get $ch
-                            local.get $tmp
-                            i32.add
-                            local.set $tmp
-                        end
-                        local.get $tmp
+                        call $move_pattern_by_offset
 
                         local.get $r
                         local.get $g
@@ -234,6 +208,28 @@
         end
 
         call $inc_frame_counter
+    )
+
+    (func $move_pattern_by_offset (param $i i32) (param $di i32) (param $max i32) (result i32)
+        (local $tmp i32)
+        ;; move i by di
+        local.get $i
+        local.get $di
+        i32.add
+        local.get $max
+        i32.rem_s
+        ;; have to change negative x offset to positive by max - i
+        local.set $tmp
+        local.get $tmp
+        i32.const 0
+        i32.lt_s
+        if
+            local.get $max
+            local.get $tmp
+            i32.add
+            local.set $tmp
+        end
+        local.get $tmp
     )
 
     (func $inc_frame_counter
