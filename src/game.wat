@@ -2,13 +2,62 @@
     (export "render" (func $render))
     (export "frame" (memory $frame_mem))
     (export "init" (func $init))
+    (export "update" (func $update))
     
     (global $cw (mut i32) (i32.const 0))  ;; canvas width
     (global $ch (mut i32) (i32.const 0))  ;; canvas height
     (global $frame_counter (mut i32) (i32.const 0))
+    (global $deltaTime (mut f32) (f32.const 0))
+    (global $posX (mut i32) (i32.const 0))
+    (global $posY (mut i32) (i32.const 0))
     
     (memory $frame_mem 6)
     (memory $common 1)
+
+    (func $update (param $deltaTime f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
+        local.get $deltaTime
+        global.set $deltaTime
+
+        local.get $w
+        i32.const 1
+        i32.eq
+        if
+            global.get $posY
+            i32.const 1
+            i32.sub
+            global.set $posY
+        end
+
+        local.get $s
+        i32.const 1
+        i32.eq
+        if
+            global.get $posY
+            i32.const 1
+            i32.add
+            global.set $posY
+        end
+
+        local.get $d
+        i32.const 1
+        i32.eq
+        if
+            global.get $posX
+            i32.const 1
+            i32.add
+            global.set $posX
+        end
+
+        local.get $a
+        i32.const 1
+        i32.eq
+        if
+            global.get $posX
+            i32.const 1
+            i32.sub
+            global.set $posX
+        end
+    )
 
     (func $init (param $cw i32) (param $ch i32)
         local.get $cw
@@ -121,14 +170,40 @@
                             local.set $b
                         end
 
-                        ;; move x depends on frame_counter x = (x + frame_counter) % cw
-                        global.get $frame_counter
                         local.get $ix
+                        global.get $posX
                         i32.add
                         global.get $cw
-                        i32.rem_u
+                        i32.rem_s
+                        local.set $tmp
+                        local.get $tmp
+                        i32.const 0
+                        i32.lt_s
+                        if
+                            global.get $cw
+                            local.get $tmp
+                            i32.add
+                            local.set $tmp
+                        end
+                        local.get $tmp
 
                         local.get $iy
+                        global.get $posY
+                        i32.add
+                        global.get $ch
+                        i32.rem_s
+                        local.set $tmp
+                        local.get $tmp
+                        i32.const 0
+                        i32.lt_s
+                        if
+                            global.get $ch
+                            local.get $tmp
+                            i32.add
+                            local.set $tmp
+                        end
+                        local.get $tmp
+
                         local.get $r
                         local.get $g
                         local.get $b

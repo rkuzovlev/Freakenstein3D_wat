@@ -3,7 +3,7 @@ const GAME_HEIGHT = 240
 
 const gameCanvas = document.getElementById('game')
 const gameContext = gameCanvas.getContext('2d')
-const b = document.getElementsByTagName('body')[0]
+const body = document.getElementsByTagName('body')[0]
 
 gameCanvas.width = GAME_WIDTH
 gameCanvas.height = GAME_HEIGHT
@@ -46,7 +46,7 @@ async function loadGame() {
     
         console.log({ instance, module })
 
-        const { frame, render, init } = instance.exports
+        const { frame, render, update, init } = instance.exports
         
         console.log('frame', frame)
 
@@ -54,8 +54,15 @@ async function loadGame() {
 
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
+        let w = 0, a = 0, s = 0, d = 0
+        let lastFrame = performance.now()
         function animate(){
+            const now = performance.now()
+            const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
+            console.log('deltaTime', deltaTime)
+            update(deltaTime, w, a, s, d)
             render()
+            lastFrame = now
 
             const bufferArray = new Uint8ClampedArray(frame.buffer, 0, bufferSize)
             const image = new ImageData(bufferArray, GAME_WIDTH, GAME_HEIGHT)
@@ -66,10 +73,24 @@ async function loadGame() {
 
         requestAnimationFrame(animate)
 
+        body.addEventListener('keydown', (e) => { 
+            if (e.key === 'w') w = 1
+            if (e.key === 'a') a = 1
+            if (e.key === 's') s = 1
+            if (e.key === 'd') d = 1
+        })
+
+        body.addEventListener('keyup', (e) => { 
+            if (e.key === 'w') w = 0
+            if (e.key === 'a') a = 0
+            if (e.key === 's') s = 0
+            if (e.key === 'd') d = 0
+        })
+
         // let interval = null
-        // b.addEventListener('keydown', (e) => { if (e.key === " " && !interval) interval = setInterval(animate, 50); })
-        // b.addEventListener('keyup', () => { clearInterval(interval); interval = null })
-        // b.addEventListener('click', animate)
+        // body.addEventListener('keydown', (e) => { if (e.key === " " && !interval) interval = setInterval(animate, 50); })
+        // body.addEventListener('keyup', () => { clearInterval(interval); interval = null })
+        // body.addEventListener('click', animate)
     }
 }
 
