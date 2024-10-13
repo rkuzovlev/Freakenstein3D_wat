@@ -170,11 +170,13 @@
                             local.set $b
                         end
 
+                        ;; move ix by posX
                         local.get $ix
                         global.get $posX
                         i32.add
                         global.get $cw
                         i32.rem_s
+                        ;; have to change negative x offset to positive by cw - ix
                         local.set $tmp
                         local.get $tmp
                         i32.const 0
@@ -187,11 +189,13 @@
                         end
                         local.get $tmp
 
+                        ;; move iy by posY
                         local.get $iy
                         global.get $posY
                         i32.add
                         global.get $ch
                         i32.rem_s
+                        ;; have to change negative y offset to positive by ch - iy
                         local.set $tmp
                         local.get $tmp
                         i32.const 0
