@@ -108,10 +108,49 @@
         i32.store (memory $frame_mem)
     )
 
-    (func $render
+    (func $get_pixel_color (param $x i32) (param $y i32) (result (;r;) i32) (result (;g;) i32) (result (;b;) i32)
         (local $r i32)
         (local $g i32)
         (local $b i32)
+        (local $tmp i32)
+        
+        local.get $x
+        i32.const 10
+        i32.div_s
+        i32.const 1
+        i32.and
+        local.set $tmp
+
+        local.get $y
+        i32.const 10
+        i32.div_s
+        i32.const 1
+        i32.and
+        local.get $tmp
+        i32.xor
+
+        if
+            i32.const 255
+            local.set $r
+            i32.const 0
+            local.set $g
+            i32.const 0
+            local.set $b
+        else
+            i32.const 255
+            local.set $r
+            i32.const 255
+            local.set $g
+            i32.const 255
+            local.set $b
+        end
+
+        local.get $r
+        local.get $g
+        local.get $b
+    )
+
+    (func $render
         (local $ix i32)
         (local $iy i32)
         (local $tmp i32)
@@ -139,37 +178,6 @@
                     i32.lt_u
 
                     if
-                        local.get $ix
-                        i32.const 10
-                        i32.div_s
-                        i32.const 1
-                        i32.and
-                        local.set $tmp
-
-                        local.get $iy
-                        i32.const 10
-                        i32.div_s
-                        i32.const 1
-                        i32.and
-                        local.get $tmp
-                        i32.xor
-
-                        if
-                            i32.const 255
-                            local.set $r
-                            i32.const 0
-                            local.set $g
-                            i32.const 0
-                            local.set $b
-                        else
-                            i32.const 255
-                            local.set $r
-                            i32.const 255
-                            local.set $g
-                            i32.const 255
-                            local.set $b
-                        end
-
                         ;; move ix by posX
                         local.get $ix
                         global.get $posX
@@ -182,9 +190,10 @@
                         global.get $ch
                         call $move_pattern_by_offset
 
-                        local.get $r
-                        local.get $g
-                        local.get $b
+                        local.get $ix
+                        local.get $iy
+                        call $get_pixel_color
+
                         call $render_pixel
 
                         ;; ix++
