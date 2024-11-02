@@ -79,26 +79,27 @@
         i32.mul
         local.set $offset
 
-        local.get $r
+        ;; should pass colors in reverse order because of little endian
+        i32.const 255
         i32.const 24
         i32.shl
         local.set $value
 
-        local.get $g
+        local.get $b
         i32.const 16
         i32.shl
         local.get $value
         i32.or
         local.set $value
 
-        local.get $b
+        local.get $g
         i32.const 8
         i32.shl 
         local.get $value
         i32.or
         local.set $value
 
-        i32.const 255
+        local.get $r
         local.get $value
         i32.or
         local.set $value
