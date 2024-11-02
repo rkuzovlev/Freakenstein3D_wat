@@ -4,8 +4,9 @@
     (export "init" (func $init))
     (export "update" (func $update))
     
-    (global $cw (mut i32) (i32.const 0))  ;; canvas width
-    (global $ch (mut i32) (i32.const 0))  ;; canvas height
+    (global $canvasW (mut i32) (i32.const 0))  ;; canvas width
+    (global $canvasH (mut i32) (i32.const 0))  ;; canvas height
+    (global $canvasHalfH (mut i32) (i32.const 0))  ;; canvas half height
     (global $frame_counter (mut i32) (i32.const 0))
     (global $deltaTime (mut f32) (f32.const 0))
     (global $posX (mut i32) (i32.const 0))
@@ -56,22 +57,26 @@
             i32.const 1
             i32.sub
             global.set $posX
-        end
-    )
+        end)
 
-    (func $init (param $cw i32) (param $ch i32)
-        local.get $cw
-        global.set $cw
-        local.get $ch
-        global.set $ch
-    )
+    (func $init (param $canvasW i32) (param $canvasH i32)
+        local.get $canvasW
+        global.set $canvasW
+
+        local.get $canvasH
+        global.set $canvasH
+        
+        local.get $canvasH
+        i32.const 2
+        i32.div_u
+        global.set $canvasHalfH)
 
     (func $render_pixel (param $x i32) (param $y i32) (param $r i32) (param $g i32) (param $b i32)
         (local $offset i32)
         (local $value i32)
         
         local.get $y
-        global.get $cw
+        global.get $canvasW
         i32.mul
         local.get $x
         i32.add
@@ -106,50 +111,7 @@
 
         local.get $offset
         local.get $value
-        i32.store (memory $frame_mem)
-    )
-
-    (func $get_pixel_color (param $x i32) (param $y i32) (result (;r;) i32) (result (;g;) i32) (result (;b;) i32)
-        (local $r i32)
-        (local $g i32)
-        (local $b i32)
-        (local $tmp i32)
-        
-        local.get $x
-        i32.const 10
-        i32.div_s
-        i32.const 1
-        i32.and
-        local.set $tmp
-
-        local.get $y
-        i32.const 10
-        i32.div_s
-        i32.const 1
-        i32.and
-        local.get $tmp
-        i32.xor
-
-        if
-            i32.const 255
-            local.set $r
-            i32.const 0
-            local.set $g
-            i32.const 0
-            local.set $b
-        else
-            i32.const 255
-            local.set $r
-            i32.const 255
-            local.set $g
-            i32.const 255
-            local.set $b
-        end
-
-        local.get $r
-        local.get $g
-        local.get $b
-    )
+        i32.store (memory $frame_mem))
 
     (func $render
         (local $ix i32)
@@ -165,7 +127,7 @@
         ;; loop by screen lines
         loop $loop_y
             local.get $iy
-            global.get $ch
+            global.get $canvasH
             i32.lt_u
             if
                 ;; reset ix
@@ -175,27 +137,13 @@
                 ;; loop by pixel in line
                 loop $loop_x
                     local.get $ix
-                    global.get $cw
+                    global.get $canvasW
                     i32.lt_u
 
                     if
-                        ;; move ix by posX
-                        local.get $ix
-                        global.get $posX
-                        global.get $cw
-                        call $move_pattern_by_offset
-
-                        ;; move iy by posY
-                        local.get $iy
-                        global.get $posY
-                        global.get $ch
-                        call $move_pattern_by_offset
-
                         local.get $ix
                         local.get $iy
-                        call $get_pixel_color
-
-                        call $render_pixel
+                        call $render_background_pixel
 
                         ;; ix++
                         local.get $ix
@@ -217,35 +165,33 @@
             end
         end
 
-        call $inc_frame_counter
-    )
+        call $inc_frame_counter)
 
-    (func $move_pattern_by_offset (param $i i32) (param $di i32) (param $max i32) (result i32)
-        (local $tmp i32)
-        ;; move i by di
-        local.get $i
-        local.get $di
-        i32.add
-        local.get $max
-        i32.rem_s
-        ;; have to change negative x offset to positive by max - i
-        local.set $tmp
-        local.get $tmp
-        i32.const 0
-        i32.lt_s
+    (func $render_background_pixel (param $x i32) (param $y i32)
+        local.get $y
+        global.get $canvasHalfH
+        i32.lt_u
         if
-            local.get $max
-            local.get $tmp
-            i32.add
-            local.set $tmp
-        end
-        local.get $tmp
-    )
+            ;; render sky
+            local.get $x
+            local.get $y
+            i32.const 100
+            i32.const 150
+            i32.const 240
+            call $render_pixel
+        else
+            ;; render floor
+            local.get $x
+            local.get $y
+            i32.const 170
+            i32.const 60
+            i32.const 25
+            call $render_pixel
+        end)
 
     (func $inc_frame_counter
         i32.const 1
         global.get $frame_counter
         i32.add
-        global.set $frame_counter
-    )
+        global.set $frame_counter)
 )
