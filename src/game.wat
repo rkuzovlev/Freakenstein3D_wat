@@ -3,14 +3,16 @@
     (export "frame" (memory $frame_mem))
     (export "init" (func $init))
     (export "update" (func $update))
+    (export "playerX" (global $playerX))
+    (export "playerY" (global $playerY))
     
     (global $canvasW (mut i32) (i32.const 0))  ;; canvas width
     (global $canvasH (mut i32) (i32.const 0))  ;; canvas height
     (global $canvasHalfH (mut i32) (i32.const 0))  ;; canvas half height
     (global $frame_counter (mut i32) (i32.const 0))
     (global $deltaTime (mut f32) (f32.const 0))
-    (global $posX (mut i32) (i32.const 0))
-    (global $posY (mut i32) (i32.const 0))
+    (global $playerX (mut i32) (i32.const 100))
+    (global $playerY (mut i32) (i32.const 100))
     
     (memory $frame_mem 6)
     (memory $common 1)
@@ -23,40 +25,40 @@
         i32.const 1
         i32.eq
         if
-            global.get $posY
+            global.get $playerY
             i32.const 1
             i32.sub
-            global.set $posY
+            global.set $playerY
         end
 
         local.get $s
         i32.const 1
         i32.eq
         if
-            global.get $posY
+            global.get $playerY
             i32.const 1
             i32.add
-            global.set $posY
+            global.set $playerY
         end
 
         local.get $d
         i32.const 1
         i32.eq
         if
-            global.get $posX
+            global.get $playerX
             i32.const 1
             i32.add
-            global.set $posX
+            global.set $playerX
         end
 
         local.get $a
         i32.const 1
         i32.eq
         if
-            global.get $posX
+            global.get $playerX
             i32.const 1
             i32.sub
-            global.set $posX
+            global.set $playerX
         end)
 
     (func $init (param $canvasW i32) (param $canvasH i32)

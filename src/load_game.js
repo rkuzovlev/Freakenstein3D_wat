@@ -46,7 +46,7 @@ async function loadGame() {
     
         console.log({ instance, module })
 
-        const { frame, render, update, init } = instance.exports
+        const { frame, render, update, init, playerX, playerY } = instance.exports
         
         console.log('frame', frame)
 
@@ -54,12 +54,88 @@ async function loadGame() {
 
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
+        
+        let FOV = Math.PI / 3 // field of view between 0 and PI
+        let rotationAngle = Math.PI
         let w = 0, a = 0, s = 0, d = 0
+
+        const CELL_WIDTH = 30
+        const MAP_PADDING = 10
+        const MAP_WIDTH = 5
+        const MAP_HEIGHT = 5
+        const map = [
+            "#", "#", "#", "#", "#", 
+            "#", ".", ".", ".", "#", 
+            "#", ".", "#", ".", "#", 
+            "#", ".", ".", ".", "#", 
+            "#", "#", "#", "#", "#", 
+        ]
+
+        function drawCell(cellX, cellY, type){
+            const x = cellX * CELL_WIDTH + MAP_PADDING
+            const y = cellY * CELL_WIDTH + MAP_PADDING
+            
+            gameContext.fillStyle = "#ddddddaa"
+            gameContext.strokeStyle = "#333333aa"
+            gameContext.beginPath()
+            gameContext.rect(x, y, CELL_WIDTH, CELL_WIDTH)
+            switch (type) {
+                case "#": {
+                    gameContext.fill()
+                    gameContext.stroke()
+                    break
+                }
+                default: gameContext.stroke()
+            }
+        }
+
+        function renderCells(){
+            map.forEach((cell, i) => {
+                const cx = i % MAP_WIDTH
+                const cy = Math.floor(i / MAP_WIDTH)
+                drawCell(cx, cy, cell)
+            })
+        }
+
+        function drawPlayer(){
+            const px = playerX.value
+            const py = playerY.value
+
+            gameContext.fillStyle = "#00ff00"
+            gameContext.strokeStyle = "#000000"
+            gameContext.beginPath()
+            gameContext.arc(px, py, 5, 0, Math.PI * 2, true)
+            gameContext.fill()
+            gameContext.stroke()
+
+            const halfFOV = FOV / 2
+            const fovLeft = rotationAngle - halfFOV
+            const fovLeftX = Math.sin(fovLeft) * 100 + px
+            const fovLeftY = Math.cos(fovLeft) * 100 + py
+
+            const fovRight = rotationAngle + halfFOV
+            const fovRightX = Math.sin(fovRight) * 100 + px
+            const fovRightY = Math.cos(fovRight) * 100 + py
+
+            gameContext.fillStyle = "#ff000050"
+            gameContext.beginPath()
+            gameContext.moveTo(px, py)
+            gameContext.lineTo(fovLeftX, fovLeftY)
+            gameContext.lineTo(fovRightX, fovRightY)
+            gameContext.moveTo(px, py)
+            gameContext.fill()
+        }
+
+        function renderMap(){
+            renderCells()
+            drawPlayer()
+        }
+
         let lastFrame = performance.now()
         function animate(){
             const now = performance.now()
             const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
-            console.log('deltaTime', deltaTime)
+            // console.log('deltaTime', deltaTime, playerX.value, playerY.value)
             update(deltaTime, w, a, s, d)
             render()
             lastFrame = now
@@ -67,6 +143,8 @@ async function loadGame() {
             const bufferArray = new Uint8ClampedArray(frame.buffer, 0, bufferSize)
             const image = new ImageData(bufferArray, GAME_WIDTH, GAME_HEIGHT)
             gameContext.putImageData(image, 0, 0)
+
+            renderMap()
 
             requestAnimationFrame(animate)
         }
@@ -87,10 +165,9 @@ async function loadGame() {
             if (e.key === 'd') d = 0
         })
 
-        // let interval = null
-        // body.addEventListener('keydown', (e) => { if (e.key === " " && !interval) interval = setInterval(animate, 50); })
-        // body.addEventListener('keyup', () => { clearInterval(interval); interval = null })
-        // body.addEventListener('click', animate)
+        body.addEventListener('mousemove', (e) => { 
+            rotationAngle = 2 * Math.PI * (-e.clientX / 600)
+        })
     }
 }
 
