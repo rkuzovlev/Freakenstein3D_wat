@@ -112,10 +112,11 @@ async function loadGame() {
             })
         }
 
-        function drawPlayer(){
+        function drawPlayer(intersections){
             const px = player_x.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
             const py = player_y.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
 
+            // draw player dot
             gameContext.fillStyle = "#00ff00"
             gameContext.strokeStyle = "#000000"
             gameContext.beginPath()
@@ -123,24 +124,18 @@ async function loadGame() {
             gameContext.fill()
             gameContext.stroke()
 
-            const halfFOV = FOV.value / 2
-            const fovLeft = playerAngleView - halfFOV
-            const fovLeftX = Math.sin(fovLeft) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
-            const fovLeftY = Math.cos(fovLeft) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
-
-            const fovRight = playerAngleView + halfFOV
-            const fovRightX = Math.sin(fovRight) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
-            const fovRightY = Math.cos(fovRight) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
-
+            // draw view cone
             gameContext.fillStyle = "#ff000050"
             gameContext.beginPath()
             gameContext.moveTo(px, py)
-            gameContext.lineTo(fovLeftX, fovLeftY)
-            gameContext.lineTo(fovRightX, fovRightY)
-            gameContext.moveTo(px, py)
+            for (let i = 0; i < intersections.length; i++){
+                const intersetion = intersections[i]
+                gameContext.lineTo(intersetion.x * MAP_DRAW_MULTILPLIER + MAP_PADDING, intersetion.y * MAP_DRAW_MULTILPLIER + MAP_PADDING)
+            }
+            gameContext.lineTo(px, py)
             gameContext.fill()
 
-
+            // draw center view line
             gameContext.strokeStyle = "#00000090"
             const centerLineX = Math.sin(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
             const centerLineY = Math.cos(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
@@ -152,13 +147,13 @@ async function loadGame() {
 
         function drawIntersectionDot(x, y){
             gameContext.beginPath()
-            gameContext.arc(x * MAP_DRAW_MULTILPLIER + MAP_PADDING, y * MAP_DRAW_MULTILPLIER + MAP_PADDING, 3, 0, Math.PI * 2, true)
+            gameContext.arc(x * MAP_DRAW_MULTILPLIER + MAP_PADDING, y * MAP_DRAW_MULTILPLIER + MAP_PADDING, 1, 0, Math.PI * 2, true)
             gameContext.fill()
         }
 
-        function drawIntersections(){
-            const vx = Math.sin(playerAngleView)
-            const vy = Math.cos(playerAngleView)
+        function getIntersectionForAngle(angle){
+            const vx = Math.sin(angle)
+            const vy = Math.cos(angle)
             
             // console.log({ vx, vy })
 
@@ -239,14 +234,35 @@ async function loadGame() {
             }
 
             if (nearX !== null && nearY !== null){
-                drawIntersectionDot(nearX, nearY)
+                return { x: nearX, y: nearY }
+            }
+
+            return null
+        }
+
+        function drawIntersections(intersections){
+            gameContext.fillStyle = "#0000ff"
+            for (let i = 0; i < intersections.length; i++){
+                const intersetion = intersections[i]
+                drawIntersectionDot(intersetion.x, intersetion.y)
             }
         }
 
         function drawMap(){
+            const intersections = []
+
+            const halfFOV = FOV.value / 2
+            const fovLeft = playerAngleView - halfFOV
+            const fovRight = playerAngleView + halfFOV
+            for (let angle = fovLeft; angle < fovRight; angle += 0.05){
+                const intersection = getIntersectionForAngle(angle)
+                if (intersection) intersections.push(intersection)
+            }
+
             drawCells()
-            drawPlayer()
-            drawIntersections()
+            drawPlayer(intersections)
+
+            drawIntersections(intersections)
         }
 
         let lastFrame = performance.now()
