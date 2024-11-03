@@ -148,52 +148,57 @@ async function loadGame() {
             gameContext.fill()
         }
 
+        let lastNearDistance = Infinity
+        let nearX = null
+        let nearY = null
+        function checkIntersection(x, y, vx, vy){
+            // check distance of intersection
+            const dvx = x - player_x.value
+            const dvy = y - player_y.value
+            const distance = Math.sqrt(dvx*dvx + dvy*dvy)
+            const isNotTooFar = distance < MAP_MAX_LINES_INTERSECT_FIND
+            const isNearThenBefore = distance < lastNearDistance
+            const isDistanceOk = isNotTooFar && isNearThenBefore
+
+            const checkCellX = Math.floor(x + vx)
+            const checkCellY = Math.floor(y + vy)
+
+            let isWall = false
+            const cellXInRange = checkCellX >= 0 && checkCellX < map_width.value
+            const cellYInRange = checkCellY >= 0 && checkCellY < map_height.value
+
+            if (cellXInRange && cellYInRange){
+                const cellIndex = checkCellY * map_width.value + checkCellX
+                const cell = MAP_BUFFER[cellIndex]
+                isWall = cell === WALL_CHAR_CODE
+            }
+
+            if (isDistanceOk && isWall){
+                lastNearDistance = distance
+                nearX = x
+                nearY = y
+            }
+        }
+
+        const checkHorizontal = (y, vx, vy) => {
+            const x = ((y - player_y.value) * vx) / vy + player_x.value
+            checkIntersection(x, y, 0, vy)
+        }
+
+        const checkVertical = (x, vx, vy) => {
+            const y = ((x - player_x.value) * vy) / vx + player_y.value
+            checkIntersection(x, y, vx, 0)
+        }
+
+
         function getIntersectionForAngle(angle){
             const vx = Math.sin(angle)
             const vy = Math.cos(angle)
 
-            let lastNearDistance = Infinity
-            let nearX = null
-            let nearY = null
-            function checkIntersection(x, y, vx, vy){
-                // check distance of intersection
-                const dvx = x - player_x.value
-                const dvy = y - player_y.value
-                const distance = Math.sqrt(dvx*dvx + dvy*dvy)
-                const isNotTooFar = distance < MAP_MAX_LINES_INTERSECT_FIND
-                const isNearThenBefore = distance < lastNearDistance
-                const isDistanceOk = isNotTooFar && isNearThenBefore
-    
-                const checkCellX = Math.floor(x + vx)
-                const checkCellY = Math.floor(y + vy)
-
-                let isWall = false
-                const cellXInRange = checkCellX >= 0 && checkCellX < map_width.value
-                const cellYInRange = checkCellY >= 0 && checkCellY < map_height.value
-
-                if (cellXInRange && cellYInRange){
-                    const cellIndex = checkCellY * map_width.value + checkCellX
-                    const cell = MAP_BUFFER[cellIndex]
-                    isWall = cell === WALL_CHAR_CODE
-                }
-
-                if (isDistanceOk && isWall){
-                    lastNearDistance = distance
-                    nearX = x
-                    nearY = y
-                }
-            }
-    
-            const checkHorizontal = (y) => {
-                const x = ((y - player_y.value) * vx) / vy + player_x.value
-                checkIntersection(x, y, 0, vy)
-            }
-
-            const checkVertical = (x) => {
-                const y = ((x - player_x.value) * vy) / vx + player_y.value
-                checkIntersection(x, y, vx, 0)
-            }
-
+            lastNearDistance = Infinity
+            nearX = null
+            nearY = null
+            
             gameContext.fillStyle = "#0000ff"
 
             // (x - player_x.value) / vx = (y - player_y.value) / vy
@@ -202,12 +207,12 @@ async function loadGame() {
             if (vy < 0){ // we are lookint top
                 const yStart = Math.floor(player_y.value)
                 for (let y = yStart; y > yStart - MAP_MAX_LINES_INTERSECT_FIND; y--){
-                    checkHorizontal(y)
+                    checkHorizontal(y, vx, vy)
                 }
             } else { // we are lookint bottom
                 const yStart = Math.ceil(player_y.value)
                 for (let y = yStart; y < yStart + MAP_MAX_LINES_INTERSECT_FIND; y++){
-                    checkHorizontal(y)
+                    checkHorizontal(y, vx, vy)
                 }
             }
             
@@ -215,12 +220,12 @@ async function loadGame() {
             if (vx > 0){ // we are looking right
                 const xStart = Math.ceil(player_x.value)
                 for (let x = xStart; x < xStart + MAP_MAX_LINES_INTERSECT_FIND; x++){
-                    checkVertical(x)
+                    checkVertical(x, vx, vy)
                 }
             } else { // we are looking left
                 const xStart = Math.floor(player_x.value)
                 for (let x = xStart; x > xStart - MAP_MAX_LINES_INTERSECT_FIND; x--){
-                    checkVertical(x)
+                    checkVertical(x, vx, vy)
                 }
             }
 
