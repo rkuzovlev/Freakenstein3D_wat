@@ -25,18 +25,20 @@
     (global $player_angle_view (mut f32) (f32.const 3.1415926535))
     (global $FOV (mut f32) (f32.const 1.0471975512))  ;; field of view between 0 and PI
     (global $half_FOV (mut f32) (f32.const 0.5235987756))
-    (global $map_width (mut i32) (i32.const 5))
-    (global $map_height (mut i32) (i32.const 5))
+    (global $map_width (mut i32) (i32.const 6))
+    (global $map_height (mut i32) (i32.const 7))
     
     (memory $frame 6)
     (memory $common 1)
     (memory $map 1)
     (data (memory $map) (i32.const 0)  
-        "#####"
-        "#...#"
-        "#.#.#"
-        "#...#"
-        "#####"
+        "######"
+        "#....#"
+        "#.#..#"
+        "#....#"
+        "#....#"
+        "#....#"
+        "######"
     )
 
     (func $update (param $delta_time f32) (param $player_angle_view f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)

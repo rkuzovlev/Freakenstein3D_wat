@@ -77,7 +77,7 @@ async function loadGame() {
         const MAP_SIZE = map_width.value * map_height.value
         const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
         const MAP_DRAW_MULTILPLIER = 20
-        const MAP_PADDING = 70
+        const MAP_PADDING = 50
         const MAP_MAX_LINES_INTERSECT_FIND = 4
         const WALL_CHAR_CODE = "#".charCodeAt(0)
         const FLOOR_CHAR_CODE = ".".charCodeAt(0)
@@ -155,8 +155,6 @@ async function loadGame() {
             const vx = Math.sin(angle)
             const vy = Math.cos(angle)
             
-            // console.log({ vx, vy })
-
             if (vx === 0 || vy === 0){
                 return null
             }
