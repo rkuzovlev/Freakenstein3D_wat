@@ -71,13 +71,14 @@ async function loadGame() {
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
         
-        let rotationAngle = Math.PI
+        let playerAngleView = Math.PI
         let w = 0, a = 0, s = 0, d = 0
 
         const MAP_SIZE = map_width.value * map_height.value
         const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
         const MAP_DRAW_MULTILPLIER = 20
-        const MAP_PADDING = 10
+        const MAP_PADDING = 70
+        const MAP_MAX_LINES_INTERSECT_FIND = 4
         const WALL_CHAR_CODE = "#".charCodeAt(0)
         const FLOOR_CHAR_CODE = ".".charCodeAt(0)
 
@@ -123,13 +124,13 @@ async function loadGame() {
             gameContext.stroke()
 
             const halfFOV = FOV.value / 2
-            const fovLeft = rotationAngle - halfFOV
-            const fovLeftX = Math.sin(fovLeft) * MAP_DRAW_MULTILPLIER * 3 + px
-            const fovLeftY = Math.cos(fovLeft) * MAP_DRAW_MULTILPLIER * 3 + py
+            const fovLeft = playerAngleView - halfFOV
+            const fovLeftX = Math.sin(fovLeft) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
+            const fovLeftY = Math.cos(fovLeft) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
 
-            const fovRight = rotationAngle + halfFOV
-            const fovRightX = Math.sin(fovRight) * MAP_DRAW_MULTILPLIER * 3 + px
-            const fovRightY = Math.cos(fovRight) * MAP_DRAW_MULTILPLIER * 3 + py
+            const fovRight = playerAngleView + halfFOV
+            const fovRightX = Math.sin(fovRight) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
+            const fovRightY = Math.cos(fovRight) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
 
             gameContext.fillStyle = "#ff000050"
             gameContext.beginPath()
@@ -138,11 +139,114 @@ async function loadGame() {
             gameContext.lineTo(fovRightX, fovRightY)
             gameContext.moveTo(px, py)
             gameContext.fill()
+
+
+            gameContext.strokeStyle = "#00000090"
+            const centerLineX = Math.sin(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
+            const centerLineY = Math.cos(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
+            gameContext.beginPath()
+            gameContext.moveTo(px, py)
+            gameContext.lineTo(centerLineX, centerLineY)
+            gameContext.stroke()
+        }
+
+        function drawIntersectionDot(x, y){
+            gameContext.beginPath()
+            gameContext.arc(x * MAP_DRAW_MULTILPLIER + MAP_PADDING, y * MAP_DRAW_MULTILPLIER + MAP_PADDING, 3, 0, Math.PI * 2, true)
+            gameContext.fill()
+        }
+
+        function drawIntersections(){
+            const vx = Math.sin(playerAngleView)
+            const vy = Math.cos(playerAngleView)
+            
+            // console.log({ vx, vy })
+
+            if (vx === 0 || vy === 0){
+                return null
+            }
+
+            let lastNearDistance = Infinity
+            let nearX = null
+            let nearY = null
+            function checkIntersection(x, y, vx, vy){
+                // check distance of intersection
+                const dvx = x - player_x.value
+                const dvy = y - player_y.value
+                const distance = Math.sqrt(dvx*dvx + dvy*dvy)
+                const isNotTooFar = distance < MAP_MAX_LINES_INTERSECT_FIND
+                const isNearThenBefore = distance < lastNearDistance
+                const isDistanceOk = isNotTooFar && isNearThenBefore
+    
+                const checkCellX = Math.floor(x + vx)
+                const checkCellY = Math.floor(y + vy)
+
+                let isWall = false
+                const cellXInRange = checkCellX >= 0 && checkCellX < map_width.value
+                const cellYInRange = checkCellY >= 0 && checkCellY < map_height.value
+
+                if (cellXInRange && cellYInRange){
+                    const cellIndex = checkCellY * map_width.value + checkCellX
+                    const cell = MAP_BUFFER[cellIndex]
+                    isWall = cell === WALL_CHAR_CODE
+                }
+
+                if (isDistanceOk && isWall){
+                    lastNearDistance = distance
+                    nearX = x
+                    nearY = y
+                }
+            }
+    
+            const checkHorizontal = (y) => {
+                const x = ((y - player_y.value) * vx) / vy + player_x.value
+                checkIntersection(x, y, 0, vy)
+            }
+
+            const checkVertical = (x) => {
+                const y = ((x - player_x.value) * vy) / vx + player_y.value
+                checkIntersection(x, y, vx, 0)
+            }
+
+            gameContext.fillStyle = "#0000ff"
+
+            // (x - player_x.value) / vx = (y - player_y.value) / vy
+            // 
+            // for horizontal lines, we know y (y = 1, y = 2 ...)
+            if (vy < 0){ // we are lookint top
+                const yStart = Math.floor(player_y.value)
+                for (let y = yStart; y > yStart - MAP_MAX_LINES_INTERSECT_FIND; y--){
+                    checkHorizontal(y)
+                }
+            } else { // we are lookint bottom
+                const yStart = Math.ceil(player_y.value)
+                for (let y = yStart; y < yStart + MAP_MAX_LINES_INTERSECT_FIND; y++){
+                    checkHorizontal(y)
+                }
+            }
+            
+            // for vertical lines, we know x (x = 1, x = 2 ...)
+            if (vx > 0){ // we are looking right
+                const xStart = Math.ceil(player_x.value)
+                for (let x = xStart; x < xStart + MAP_MAX_LINES_INTERSECT_FIND; x++){
+                    checkVertical(x)
+                }
+            } else { // we are looking left
+                const xStart = Math.floor(player_x.value)
+                for (let x = xStart; x > xStart - MAP_MAX_LINES_INTERSECT_FIND; x--){
+                    checkVertical(x)
+                }
+            }
+
+            if (nearX !== null && nearY !== null){
+                drawIntersectionDot(nearX, nearY)
+            }
         }
 
         function drawMap(){
             drawCells()
             drawPlayer()
+            drawIntersections()
         }
 
         let lastFrame = performance.now()
@@ -150,7 +254,7 @@ async function loadGame() {
             const now = performance.now()
             const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
             // console.log('deltaTime', deltaTime, player_x.value, player_y.value)
-            update(deltaTime, w, a, s, d)
+            update(deltaTime, playerAngleView, w, a, s, d)
             render()
             lastFrame = now
 
@@ -180,7 +284,7 @@ async function loadGame() {
         })
 
         body.addEventListener('mousemove', (e) => { 
-            rotationAngle = 2 * Math.PI * (-e.clientX / 600)
+            playerAngleView = 2 * Math.PI * (-e.clientX / 600)
         })
     }
 }

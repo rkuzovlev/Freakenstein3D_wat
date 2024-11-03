@@ -22,6 +22,7 @@
     (global $delta_time (mut f32) (f32.const 0))
     (global $player_x (mut f32) (f32.const 3.5))
     (global $player_y (mut f32) (f32.const 3.5))
+    (global $player_angle_view (mut f32) (f32.const 3.1415926535))
     (global $FOV (mut f32) (f32.const 1.0471975512))  ;; field of view between 0 and PI
     (global $half_FOV (mut f32) (f32.const 0.5235987756))
     (global $map_width (mut i32) (i32.const 5))
@@ -38,9 +39,12 @@
         "#####"
     )
 
-    (func $update (param $delta_time f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
+    (func $update (param $delta_time f32) (param $player_angle_view f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
         local.get $delta_time
         global.set $delta_time
+
+        local.get $player_angle_view
+        global.set $player_angle_view
 
         local.get $w
         i32.const 1
@@ -48,6 +52,8 @@
         if
             global.get $player_y
             local.get $delta_time
+            f32.const 2
+            f32.mul
             f32.sub
             global.set $player_y
         end
@@ -58,6 +64,8 @@
         if
             global.get $player_y
             local.get $delta_time
+            f32.const 2
+            f32.mul
             f32.add
             global.set $player_y
         end
@@ -68,6 +76,8 @@
         if
             global.get $player_x
             local.get $delta_time
+            f32.const 2
+            f32.mul
             f32.add
             global.set $player_x
         end
@@ -78,6 +88,8 @@
         if
             global.get $player_x
             local.get $delta_time
+            f32.const 2
+            f32.mul
             f32.sub
             global.set $player_x
         end
@@ -138,55 +150,39 @@
         local.get $value
         i32.store (memory $frame))
 
+    (func $draw_column (param $x i32)
+        (local $angle f32)
+
+        global.get $player_angle_view
+        global.get $half_FOV
+        f32.sub
+        local.set $angle
+
+    )
+
     (func $render
         (local $ix i32)
-        (local $iy i32)
-        (local $tmp i32)
 
         i32.const 0
         local.set $ix
 
-        i32.const 0
-        local.set $iy
-
-        ;; loop by screen lines
-        loop $loop_y
-            local.get $iy
-            global.get $canvas_height
+        ;; loop by pixel in line
+        loop $loop_x
+            local.get $ix
+            global.get $canvas_width
             i32.lt_u
+
             if
-                ;; reset ix
-                i32.const 0
-                local.set $ix
-                
-                ;; loop by pixel in line
-                loop $loop_x
-                    local.get $ix
-                    global.get $canvas_width
-                    i32.lt_u
+                local.get $ix
+                call $draw_column
 
-                    if
-                        local.get $ix
-                        local.get $iy
-                        call $render_background_pixel
-
-                        ;; ix++
-                        local.get $ix
-                        i32.const 1
-                        i32.add
-                        local.set $ix
-
-                        br $loop_x
-                    end
-                end
-
-                ;; iy++
-                local.get $iy
+                ;; ix++
+                local.get $ix
                 i32.const 1
                 i32.add
-                local.set $iy
+                local.set $ix
 
-                br $loop_y
+                br $loop_x
             end
         end)
 
