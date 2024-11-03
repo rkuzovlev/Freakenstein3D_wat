@@ -56,9 +56,15 @@ async function loadGame() {
     
         console.log({ instance, module })
 
-        const { frame, render, update, init, player_x, player_y, FOV } = instance.exports
+        const { 
+            frame, 
+            map, map_width, map_height,
+            render, update, init, 
+            player_x, player_y, 
+            FOV 
+        } = instance.exports
         
-        console.log('frame', frame)
+        console.log('memories', frame, map)
 
         init(GAME_WIDTH, GAME_HEIGHT)
 
@@ -68,17 +74,12 @@ async function loadGame() {
         let rotationAngle = Math.PI
         let w = 0, a = 0, s = 0, d = 0
 
+        const MAP_SIZE = map_width.value * map_height.value
+        const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
         const MAP_DRAW_MULTILPLIER = 20
         const MAP_PADDING = 10
-        const MAP_WIDTH = 5
-        const MAP_HEIGHT = 5
-        const map = [
-            "#", "#", "#", "#", "#", 
-            "#", ".", ".", ".", "#", 
-            "#", ".", "#", ".", "#", 
-            "#", ".", ".", ".", "#", 
-            "#", "#", "#", "#", "#", 
-        ]
+        const WALL_CHAR_CODE = "#".charCodeAt(0)
+        const FLOOR_CHAR_CODE = ".".charCodeAt(0)
 
         function drawCell(cellX, cellY, type){
             const x = cellX * MAP_DRAW_MULTILPLIER + MAP_PADDING
@@ -89,8 +90,12 @@ async function loadGame() {
             gameContext.beginPath()
             gameContext.rect(x, y, MAP_DRAW_MULTILPLIER, MAP_DRAW_MULTILPLIER)
             switch (type) {
-                case "#": {
+                case WALL_CHAR_CODE: {
                     gameContext.fill()
+                    gameContext.stroke()
+                    break
+                }
+                case FLOOR_CHAR_CODE: {
                     gameContext.stroke()
                     break
                 }
@@ -99,9 +104,9 @@ async function loadGame() {
         }
 
         function drawCells(){
-            map.forEach((cell, i) => {
-                const cx = i % MAP_WIDTH
-                const cy = Math.floor(i / MAP_WIDTH)
+            MAP_BUFFER.forEach((cell, i) => {
+                const cx = i % map_width.value
+                const cy = Math.floor(i / map_width.value)
                 drawCell(cx, cy, cell)
             })
         }

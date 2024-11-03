@@ -3,10 +3,13 @@
     (export "init" (func $init))
     (export "update" (func $update))
     
-    (export "frame" (memory $frame_mem))
+    (export "frame" (memory $frame))
+    (export "map" (memory $map))
     
     (export "player_x" (global $player_x))
     (export "player_y" (global $player_y))
+    (export "map_width" (global $map_width))
+    (export "map_height" (global $map_height))
     (export "FOV" (global $FOV))
 
     (import "Math" "sin" (func $sin (param f32) (result f32)))
@@ -21,9 +24,19 @@
     (global $player_y (mut f32) (f32.const 3.5))
     (global $FOV (mut f32) (f32.const 1.0471975512))  ;; field of view between 0 and PI
     (global $half_FOV (mut f32) (f32.const 0.5235987756))
+    (global $map_width (mut i32) (i32.const 5))
+    (global $map_height (mut i32) (i32.const 5))
     
-    (memory $frame_mem 6)
+    (memory $frame 6)
     (memory $common 1)
+    (memory $map 1)
+    (data (memory $map) (i32.const 0)  
+        "#####"
+        "#...#"
+        "#.#.#"
+        "#...#"
+        "#####"
+    )
 
     (func $update (param $delta_time f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
         local.get $delta_time
@@ -123,7 +136,7 @@
 
         local.get $offset
         local.get $value
-        i32.store (memory $frame_mem))
+        i32.store (memory $frame))
 
     (func $render
         (local $ix i32)
