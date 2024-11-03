@@ -5,90 +5,90 @@
     
     (export "frame" (memory $frame_mem))
     
-    (export "playerX" (global $playerX))
-    (export "playerY" (global $playerY))
+    (export "player_x" (global $player_x))
+    (export "player_y" (global $player_y))
     (export "FOV" (global $FOV))
 
     (import "Math" "sin" (func $sin (param f32) (result f32)))
     (import "common" "log" (func $log (param f32)))
     
-    (global $canvasW (mut i32) (i32.const 0))  ;; canvas width
-    (global $canvasH (mut i32) (i32.const 0))  ;; canvas height
-    (global $canvasHalfH (mut i32) (i32.const 0))  ;; canvas half height
+    (global $canvas_width (mut i32) (i32.const 0))
+    (global $canvas_height (mut i32) (i32.const 0))
+    (global $canvas_half_height (mut i32) (i32.const 0))
     (global $frame_counter (mut i32) (i32.const 0))
-    (global $deltaTime (mut f32) (f32.const 0))
-    (global $playerX (mut f32) (f32.const 3.5))
-    (global $playerY (mut f32) (f32.const 3.5))
+    (global $delta_time (mut f32) (f32.const 0))
+    (global $player_x (mut f32) (f32.const 3.5))
+    (global $player_y (mut f32) (f32.const 3.5))
     (global $FOV (mut f32) (f32.const 1.0471975512))  ;; field of view between 0 and PI
-    (global $halfFOV (mut f32) (f32.const 0.5235987756))
+    (global $half_FOV (mut f32) (f32.const 0.5235987756))
     
     (memory $frame_mem 6)
     (memory $common 1)
 
-    (func $update (param $deltaTime f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
-        local.get $deltaTime
-        global.set $deltaTime
+    (func $update (param $delta_time f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
+        local.get $delta_time
+        global.set $delta_time
 
         local.get $w
         i32.const 1
         i32.eq
         if
-            global.get $playerY
-            local.get $deltaTime
+            global.get $player_y
+            local.get $delta_time
             f32.sub
-            global.set $playerY
+            global.set $player_y
         end
 
         local.get $s
         i32.const 1
         i32.eq
         if
-            global.get $playerY
-            local.get $deltaTime
+            global.get $player_y
+            local.get $delta_time
             f32.add
-            global.set $playerY
+            global.set $player_y
         end
 
         local.get $d
         i32.const 1
         i32.eq
         if
-            global.get $playerX
-            local.get $deltaTime
+            global.get $player_x
+            local.get $delta_time
             f32.add
-            global.set $playerX
+            global.set $player_x
         end
 
         local.get $a
         i32.const 1
         i32.eq
         if
-            global.get $playerX
-            local.get $deltaTime
+            global.get $player_x
+            local.get $delta_time
             f32.sub
-            global.set $playerX
+            global.set $player_x
         end
         
         call $inc_frame_counter)
 
-    (func $init (param $canvasW i32) (param $canvasH i32)
-        local.get $canvasW
-        global.set $canvasW
+    (func $init (param $canvas_width i32) (param $canvas_height i32)
+        local.get $canvas_width
+        global.set $canvas_width
 
-        local.get $canvasH
-        global.set $canvasH
+        local.get $canvas_height
+        global.set $canvas_height
         
-        local.get $canvasH
+        local.get $canvas_height
         i32.const 2
         i32.div_u
-        global.set $canvasHalfH)
+        global.set $canvas_half_height)
 
     (func $render_pixel (param $x i32) (param $y i32) (param $r i32) (param $g i32) (param $b i32)
         (local $offset i32)
         (local $value i32)
         
         local.get $y
-        global.get $canvasW
+        global.get $canvas_width
         i32.mul
         local.get $x
         i32.add
@@ -139,7 +139,7 @@
         ;; loop by screen lines
         loop $loop_y
             local.get $iy
-            global.get $canvasH
+            global.get $canvas_height
             i32.lt_u
             if
                 ;; reset ix
@@ -149,7 +149,7 @@
                 ;; loop by pixel in line
                 loop $loop_x
                     local.get $ix
-                    global.get $canvasW
+                    global.get $canvas_width
                     i32.lt_u
 
                     if
@@ -191,7 +191,7 @@
         ;; loop by screen lines
         loop $loop_y
             local.get $iy
-            global.get $canvasH
+            global.get $canvas_height
             i32.lt_u
             if
                 ;; reset ix
@@ -201,7 +201,7 @@
                 ;; loop by pixel in line
                 loop $loop_x
                     local.get $ix
-                    global.get $canvasW
+                    global.get $canvas_width
                     i32.lt_u
 
                     if
@@ -231,7 +231,7 @@
 
     (func $render_background_pixel (param $x i32) (param $y i32)
         local.get $y
-        global.get $canvasHalfH
+        global.get $canvas_half_height
         i32.lt_u
         if
             ;; render sky

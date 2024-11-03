@@ -56,7 +56,7 @@ async function loadGame() {
     
         console.log({ instance, module })
 
-        const { frame, render, update, init, playerX, playerY, FOV } = instance.exports
+        const { frame, render, update, init, player_x, player_y, FOV } = instance.exports
         
         console.log('frame', frame)
 
@@ -98,7 +98,7 @@ async function loadGame() {
             }
         }
 
-        function renderCells(){
+        function drawCells(){
             map.forEach((cell, i) => {
                 const cx = i % MAP_WIDTH
                 const cy = Math.floor(i / MAP_WIDTH)
@@ -107,8 +107,8 @@ async function loadGame() {
         }
 
         function drawPlayer(){
-            const px = playerX.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
-            const py = playerY.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
+            const px = player_x.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
+            const py = player_y.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
 
             gameContext.fillStyle = "#00ff00"
             gameContext.strokeStyle = "#000000"
@@ -135,8 +135,8 @@ async function loadGame() {
             gameContext.fill()
         }
 
-        function renderMap(){
-            renderCells()
+        function drawMap(){
+            drawCells()
             drawPlayer()
         }
 
@@ -144,7 +144,7 @@ async function loadGame() {
         function animate(){
             const now = performance.now()
             const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
-            // console.log('deltaTime', deltaTime, playerX.value, playerY.value)
+            // console.log('deltaTime', deltaTime, player_x.value, player_y.value)
             update(deltaTime, w, a, s, d)
             render()
             lastFrame = now
@@ -153,7 +153,7 @@ async function loadGame() {
             const image = new ImageData(bufferArray, GAME_WIDTH, GAME_HEIGHT)
             gameContext.putImageData(image, 0, 0)
 
-            renderMap()
+            drawMap()
 
             requestAnimationFrame(animate)
         }
