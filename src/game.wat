@@ -11,6 +11,7 @@
     (export "map_width" (global $map_width))
     (export "map_height" (global $map_height))
     (export "FOV" (global $FOV))
+    (export "player_angle_view" (global $player_angle_view))
 
     (import "Math" "sin" (func $sin (param f32) (result f32)))
     (import "common" "log" (func $log (param f32)))

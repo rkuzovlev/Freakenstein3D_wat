@@ -60,7 +60,7 @@ async function loadGame() {
             frame, 
             map, map_width, map_height,
             render, update, init, 
-            player_x, player_y, 
+            player_x, player_y, player_angle_view,
             FOV 
         } = instance.exports
         
@@ -71,7 +71,6 @@ async function loadGame() {
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
         
-        let playerAngleView = Math.PI
         let w = 0, a = 0, s = 0, d = 0
 
         const MAP_SIZE = map_width.value * map_height.value
@@ -137,8 +136,8 @@ async function loadGame() {
 
             // draw center view line
             gameContext.strokeStyle = "#00000090"
-            const centerLineX = Math.sin(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
-            const centerLineY = Math.cos(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
+            const centerLineX = Math.sin(player_angle_view.value) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
+            const centerLineY = Math.cos(player_angle_view.value) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
             gameContext.beginPath()
             gameContext.moveTo(px, py)
             gameContext.lineTo(centerLineX, centerLineY)
@@ -154,10 +153,6 @@ async function loadGame() {
         function getIntersectionForAngle(angle){
             const vx = Math.sin(angle)
             const vy = Math.cos(angle)
-            
-            if (vx === 0 || vy === 0){
-                return null
-            }
 
             let lastNearDistance = Infinity
             let nearX = null
@@ -250,8 +245,8 @@ async function loadGame() {
             const intersections = []
 
             const halfFOV = FOV.value / 2
-            const fovLeft = playerAngleView - halfFOV
-            const fovRight = playerAngleView + halfFOV
+            const fovLeft = player_angle_view.value - halfFOV
+            const fovRight = player_angle_view.value + halfFOV
             for (let angle = fovLeft; angle < fovRight; angle += 0.05){
                 const intersection = getIntersectionForAngle(angle)
                 if (intersection) intersections.push(intersection)
@@ -264,6 +259,7 @@ async function loadGame() {
         }
 
         let lastFrame = performance.now()
+        let playerAngleView = player_angle_view.value
         function animate(){
             const now = performance.now()
             const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
