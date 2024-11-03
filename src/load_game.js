@@ -70,8 +70,6 @@ async function loadGame() {
 
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
-        
-        let w = 0, a = 0, s = 0, d = 0
 
         const MAP_SIZE = map_width.value * map_height.value
         const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
@@ -254,12 +252,13 @@ async function loadGame() {
 
             drawCells()
             drawPlayer(intersections)
-
             drawIntersections(intersections)
         }
 
         let lastFrame = performance.now()
         let playerAngleView = player_angle_view.value
+        let w = 0, a = 0, s = 0, d = 0
+        let isDrawMap = true
         function animate(){
             const now = performance.now()
             const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
@@ -272,7 +271,7 @@ async function loadGame() {
             const image = new ImageData(bufferArray, GAME_WIDTH, GAME_HEIGHT)
             gameContext.putImageData(image, 0, 0)
 
-            drawMap()
+            if (isDrawMap) drawMap()
 
             requestAnimationFrame(animate)
         }
@@ -284,6 +283,7 @@ async function loadGame() {
             if (e.key === 'a') a = 1
             if (e.key === 's') s = 1
             if (e.key === 'd') d = 1
+            if (e.key === 'm') isDrawMap = !isDrawMap
         })
 
         body.addEventListener('keyup', (e) => { 

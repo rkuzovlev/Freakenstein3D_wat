@@ -23,6 +23,7 @@
     (global $delta_time (mut f32) (f32.const 0))
     (global $player_x (mut f32) (f32.const 3.5))
     (global $player_y (mut f32) (f32.const 3.5))
+    (global $player_move_speed (mut f32) (f32.const 2))
     (global $player_angle_view (mut f32) (f32.const 3.1415926535))
     (global $FOV (mut f32) (f32.const 1.0471975512))  ;; field of view between 0 and PI
     (global $half_FOV (mut f32) (f32.const 0.5235987756))
@@ -55,7 +56,7 @@
         if
             global.get $player_y
             local.get $delta_time
-            f32.const 2
+            global.get $player_move_speed
             f32.mul
             f32.sub
             global.set $player_y
@@ -67,7 +68,7 @@
         if
             global.get $player_y
             local.get $delta_time
-            f32.const 2
+            global.get $player_move_speed
             f32.mul
             f32.add
             global.set $player_y
@@ -79,7 +80,7 @@
         if
             global.get $player_x
             local.get $delta_time
-            f32.const 2
+            global.get $player_move_speed
             f32.mul
             f32.add
             global.set $player_x
@@ -91,7 +92,7 @@
         if
             global.get $player_x
             local.get $delta_time
-            f32.const 2
+            global.get $player_move_speed
             f32.mul
             f32.sub
             global.set $player_x
