@@ -41,12 +41,22 @@ async function loadGame() {
         const wasmDataBuffer = await componentsBlob.arrayBuffer()
         const wasmData = wasmDataBuffer.slice(0, wasmLength)
 
+
+        function log(number){
+            console.log('wasm', number)
+        }
+
+        const exportFunctions = {
+            common: { log },
+            Math: Math
+        }
+
         // const { instance, module } = await WebAssembly.instantiate(wasmData)
-        const { instance, module } = await WebAssembly.instantiateStreaming(fetch('./game.wasm'))
+        const { instance, module } = await WebAssembly.instantiateStreaming(fetch('./game.wasm'), exportFunctions)
     
         console.log({ instance, module })
 
-        const { frame, render, update, init, playerX, playerY } = instance.exports
+        const { frame, render, update, init, playerX, playerY, FOV } = instance.exports
         
         console.log('frame', frame)
 
@@ -55,11 +65,10 @@ async function loadGame() {
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
         
-        let FOV = Math.PI / 3 // field of view between 0 and PI
         let rotationAngle = Math.PI
         let w = 0, a = 0, s = 0, d = 0
 
-        const CELL_WIDTH = 30
+        const MAP_DRAW_MULTILPLIER = 20
         const MAP_PADDING = 10
         const MAP_WIDTH = 5
         const MAP_HEIGHT = 5
@@ -72,13 +81,13 @@ async function loadGame() {
         ]
 
         function drawCell(cellX, cellY, type){
-            const x = cellX * CELL_WIDTH + MAP_PADDING
-            const y = cellY * CELL_WIDTH + MAP_PADDING
+            const x = cellX * MAP_DRAW_MULTILPLIER + MAP_PADDING
+            const y = cellY * MAP_DRAW_MULTILPLIER + MAP_PADDING
             
             gameContext.fillStyle = "#ddddddaa"
             gameContext.strokeStyle = "#333333aa"
             gameContext.beginPath()
-            gameContext.rect(x, y, CELL_WIDTH, CELL_WIDTH)
+            gameContext.rect(x, y, MAP_DRAW_MULTILPLIER, MAP_DRAW_MULTILPLIER)
             switch (type) {
                 case "#": {
                     gameContext.fill()
@@ -98,8 +107,8 @@ async function loadGame() {
         }
 
         function drawPlayer(){
-            const px = playerX.value
-            const py = playerY.value
+            const px = playerX.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
+            const py = playerY.value * MAP_DRAW_MULTILPLIER + MAP_PADDING
 
             gameContext.fillStyle = "#00ff00"
             gameContext.strokeStyle = "#000000"
@@ -108,14 +117,14 @@ async function loadGame() {
             gameContext.fill()
             gameContext.stroke()
 
-            const halfFOV = FOV / 2
+            const halfFOV = FOV.value / 2
             const fovLeft = rotationAngle - halfFOV
-            const fovLeftX = Math.sin(fovLeft) * 100 + px
-            const fovLeftY = Math.cos(fovLeft) * 100 + py
+            const fovLeftX = Math.sin(fovLeft) * MAP_DRAW_MULTILPLIER * 3 + px
+            const fovLeftY = Math.cos(fovLeft) * MAP_DRAW_MULTILPLIER * 3 + py
 
             const fovRight = rotationAngle + halfFOV
-            const fovRightX = Math.sin(fovRight) * 100 + px
-            const fovRightY = Math.cos(fovRight) * 100 + py
+            const fovRightX = Math.sin(fovRight) * MAP_DRAW_MULTILPLIER * 3 + px
+            const fovRightY = Math.cos(fovRight) * MAP_DRAW_MULTILPLIER * 3 + py
 
             gameContext.fillStyle = "#ff000050"
             gameContext.beginPath()
