@@ -41,14 +41,19 @@ async function loadGame() {
         const wasmDataBuffer = await componentsBlob.arrayBuffer()
         const wasmData = wasmDataBuffer.slice(0, wasmLength)
 
+        let newIntersections = []
 
         function log(number){
             console.log('wasm', number)
         }
 
+        function onIntersectionFound(x, y){
+            newIntersections.push({ x, y })
+        }
+
         const exportFunctions = {
-            common: { log },
-            Math: Math
+            common: { log, onIntersectionFound },
+            Math
         }
 
         // const { instance, module } = await WebAssembly.instantiate(wasmData)
@@ -159,15 +164,15 @@ async function loadGame() {
             const isNotTooFar = distance < MAP_MAX_LINES_INTERSECT_FIND
             const isNearThenBefore = distance < lastNearDistance
             const isDistanceOk = isNotTooFar && isNearThenBefore
-
-            const checkCellX = Math.floor(x + vx)
-            const checkCellY = Math.floor(y + vy)
+            
+            const checkCellX = Math.floor(x + vx / 2)
+            const checkCellY = Math.floor(y + vy / 2)
 
             let isWall = false
-            const cellXInRange = checkCellX >= 0 && checkCellX < map_width.value
-            const cellYInRange = checkCellY >= 0 && checkCellY < map_height.value
-
-            if (cellXInRange && cellYInRange){
+            const isCellXInRange = checkCellX >= 0 && checkCellX < map_width.value
+            const isCellYInRange = checkCellY >= 0 && checkCellY < map_height.value
+            
+            if (isCellXInRange && isCellYInRange){
                 const cellIndex = checkCellY * map_width.value + checkCellX
                 const cell = MAP_BUFFER[cellIndex]
                 isWall = cell === WALL_CHAR_CODE
@@ -246,18 +251,21 @@ async function loadGame() {
 
         function drawMap(){
             const intersections = []
+            // console.log(newIntersections)
 
-            const halfFOV = FOV.value / 2
-            const fovLeft = player_angle_view.value - halfFOV
-            const fovRight = player_angle_view.value + halfFOV
-            for (let angle = fovLeft; angle < fovRight; angle += 0.05){
-                const intersection = getIntersectionForAngle(angle)
-                if (intersection) intersections.push(intersection)
-            }
+            // const halfFOV = FOV.value / 2
+            // const fovLeft = player_angle_view.value - halfFOV
+            // const fovRight = player_angle_view.value + halfFOV
+            // for (let angle = fovLeft; angle < fovRight; angle += 0.01){
+                // const intersection = getIntersectionForAngle(angle)
+                // if (intersection) intersections.push(intersection)
+            // }
 
             drawCells()
-            drawPlayer(intersections)
-            drawIntersections(intersections)
+            drawPlayer(newIntersections)
+            drawIntersections(newIntersections)
+
+            newIntersections = []
         }
 
         let lastFrame = performance.now()
