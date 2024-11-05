@@ -254,11 +254,12 @@ async function loadGame() {
             // console.log(newIntersections)
 
             // const halfFOV = FOV.value / 2
-            // const fovLeft = player_angle_view.value - halfFOV
-            // const fovRight = player_angle_view.value + halfFOV
-            // for (let angle = fovLeft; angle < fovRight; angle += 0.01){
-                // const intersection = getIntersectionForAngle(angle)
-                // if (intersection) intersections.push(intersection)
+            // const fovLeft = player_angle_view.value + halfFOV
+            // const fovRight = player_angle_view.value - halfFOV
+            // 
+            // for (let angle = fovLeft; angle > fovRight; angle -= 0.01){
+            //     const intersection = getIntersectionForAngle(angle)
+            //     if (intersection) intersections.push(intersection)
             // }
 
             drawCells()

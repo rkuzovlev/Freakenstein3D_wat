@@ -15,30 +15,39 @@
 
     (import "Math" "sin" (func $sin (param f32) (result f32)))
     (import "Math" "cos" (func $cos (param f32) (result f32)))
+    (import "Math" "atan" (func $atan (param f32) (result f32)))
     (import "common" "log" (func $log (param f32)))
     (import "common" "log" (func $logi (param i32)))
     (import "common" "onIntersectionFound" (func $on_intersection_found (param f32) (param f32)))
     
-    (global $canvas_width (mut i32) (i32.const 0))
-    (global $canvas_height (mut i32) (i32.const 0))
+    (global $canvas_width       (mut i32) (i32.const 0))
+    (global $canvas_height      (mut i32) (i32.const 0))
     (global $canvas_half_height (mut i32) (i32.const 0))
-    (global $frame_counter (mut i32) (i32.const 0))
-    (global $delta_time (mut f32) (f32.const 0))
-    (global $player_x (mut f32) (f32.const 3.5))
-    (global $player_y (mut f32) (f32.const 3.5))
-    (global $player_move_speed f32 (f32.const 2))
-    (global $player_angle_view (mut f32) (f32.const 3.1415926535))
-    (global $FOV f32 (f32.const 1.0471975512))  ;; field of view between 0 and PI
-    (global $half_FOV f32 (f32.const 0.5235987756)) ;; !!!! have to change with FOV
-    (global $FOV_angle_step (mut f32) (f32.const 0.1))
-    (global $map_width i32 (i32.const 6))
-    (global $map_height i32 (i32.const 7))
-    (global $intersection_last_near_distance (mut f32) (f32.const 9999999))
-    (global $intersection_near_x (mut f32) (f32.const 0))
-    (global $intersection_near_y (mut f32) (f32.const 0))
-    (global $intersection_is_found (mut i32) (i32.const 0))
-    (global $intersection_map_max_lines_find i32 (i32.const 4))
     
+    (global $frame_counter (mut i32) (i32.const 0))
+    (global $delta_time    (mut f32) (f32.const 0))
+    
+    (global $player_x          (mut f32) (f32.const 3.5))
+    (global $player_y          (mut f32) (f32.const 3.5))
+    (global $player_move_speed f32       (f32.const 2))
+    (global $player_angle_view (mut f32) (f32.const 3.1415926535))
+    
+    (global $FOV            f32       (f32.const 1.0471975512)) ;; field of view between 0 and PI
+    (global $FOV_angle_step (mut f32) (f32.const 0.1))          ;; default step, need to initialize in $init function
+    
+    (global $map_width  i32 (i32.const 6))
+    (global $map_height i32 (i32.const 7))
+    
+    (global $intersection_last_near_distance        (mut f32) (f32.const 9999999))
+    (global $intersection_near_x                    (mut f32) (f32.const 0))
+    (global $intersection_near_y                    (mut f32) (f32.const 0))
+    (global $intersection_is_found                  (mut i32) (i32.const 0))
+    (global $intersection_map_max_distance_in_lines i32       (i32.const 4))
+    
+    (global $min_wall_height_percent  i32        (i32.const 10))
+    (global $min_wall_height          (mut i32)  (i32.const 0)) ;; need to calculate in $init 
+    
+
     (memory $frame 6)
     (memory $common 1)
     (memory $map 1)
@@ -125,12 +134,32 @@
         local.get $canvas_width
         f32.convert_i32_s
         f32.div
-        global.set $FOV_angle_step)
+        global.set $FOV_angle_step
+        
+        ;; min_wall_height = canvas_height * (min_wall_height_percent / 100)
+        global.get $canvas_height
+        f32.convert_i32_s
+        global.get $min_wall_height_percent
+        f32.convert_i32_s
+        f32.const 100
+        f32.div
+        f32.mul
+        i32.trunc_f32_s
+        global.set $min_wall_height)
 
-    (func $render_pixel (param $x i32) (param $y i32) (param $r i32) (param $g i32) (param $b i32)
+    (func $shade_color_channel (param $color_channel_value i32) (param $shading f32) (result i32)
+        local.get $color_channel_value
+        f32.convert_i32_s
+        local.get $shading
+        f32.mul
+        i32.trunc_f32_s
+    )
+
+    (func $render_pixel (param $x i32) (param $y i32) (param $r i32) (param $g i32) (param $b i32) (param $shading f32)
         (local $offset i32)
         (local $value i32)
-        
+
+        ;; (y * canvas_width + x) * 4    ;; need to multiply by 4 because of 4 bytes in one pixel RGBA
         local.get $y
         global.get $canvas_width
         i32.mul
@@ -147,6 +176,8 @@
         local.set $value
 
         local.get $b
+        local.get $shading
+        call $shade_color_channel
         i32.const 16
         i32.shl
         local.get $value
@@ -154,6 +185,8 @@
         local.set $value
 
         local.get $g
+        local.get $shading
+        call $shade_color_channel
         i32.const 8
         i32.shl 
         local.get $value
@@ -161,6 +194,8 @@
         local.set $value
 
         local.get $r
+        local.get $shading
+        call $shade_color_channel
         local.get $value
         i32.or
         local.set $value
@@ -169,17 +204,112 @@
         local.get $value
         i32.store (memory $frame))
 
+    (func $draw_wall_pixel (param $x i32) (param $y i32) (param $shading f32)
+        local.get $x
+        local.get $y
+        i32.const 180
+        i32.const 180
+        i32.const 180
+        local.get $shading
+        call $render_pixel)
+    
     (func $draw_column (param $x i32)
+        (local $y_wall_start i32)
+        (local $y_wall_end i32)
+        (local $percent_of_intersect f32)
+        (local $half_wall_diff f32)
+        (local $acrtan_percent f32)
+
+        ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
         global.get $player_angle_view
-        global.get $half_FOV
-        f32.sub
+        global.get $FOV
+        f32.const 2
+        f32.div
+        f32.add
         global.get $FOV_angle_step
         local.get $x
         f32.convert_i32_s
         f32.mul
-        f32.add
-        ;; angle = player_angle_view - half_FOV + FOV_angle_step * x
+        f32.sub
         call $get_intersection_for_angle
+        
+        global.get $intersection_is_found
+        i32.const 1
+        i32.eq
+        if 
+            ;; we have intersection, draw wall
+
+            ;; percent_of_intersect = intersection_last_near_distance / intersection_map_max_distance_in_lines
+            ;; acrtan_percent = arctan(percent_of_intersect * 20) / (pi / 2)
+            ;; half_wall_diff = (canvas_height - min_wall_height) / 2
+            ;; y_wall_start = half_wall_diff * acrtan_percent
+
+            global.get $intersection_last_near_distance
+            global.get $intersection_map_max_distance_in_lines
+            f32.convert_i32_s
+            f32.div
+            local.set $percent_of_intersect
+
+            local.get $percent_of_intersect
+            f32.const 20
+            f32.mul
+            call $atan
+            f32.const 1.5707963268 ;; pi / 2
+            f32.div
+            local.set $acrtan_percent
+                        
+            global.get $canvas_height
+            f32.convert_i32_s
+            global.get $min_wall_height
+            f32.convert_i32_s
+            f32.sub
+            f32.const 2
+            f32.div
+            local.set $half_wall_diff
+
+            local.get $half_wall_diff
+            local.get $acrtan_percent
+            f32.mul
+            i32.trunc_f32_s
+            local.set $y_wall_start
+
+            local.get $y_wall_start
+            i32.const 0
+            i32.lt_s
+            if
+                i32.const 0
+                local.set $y_wall_start
+            end
+
+
+            global.get $canvas_width
+            local.get $y_wall_start
+            i32.sub
+            local.set $y_wall_end
+
+            loop $loop_y
+                local.get $y_wall_start
+                local.get $y_wall_end
+                i32.lt_u
+
+                if
+                    local.get $x
+                    local.get $y_wall_start
+                    f32.const 1
+                    local.get $percent_of_intersect
+                    f32.sub
+                    call $draw_wall_pixel
+
+                    ;; y_wall_start++
+                    local.get $y_wall_start
+                    i32.const 1
+                    i32.add
+                    local.set $y_wall_start
+
+                    br $loop_y
+                end
+            end
+        end
     )
 
     (func $check_intersection (param $x f32) (param $y f32) (param $vx f32) (param $vy f32)
@@ -221,7 +351,7 @@
 
         ;; is_not_too_far = distance < MAP_MAX_LINES_INTERSECT_FIND
         local.get $distance
-        global.get $intersection_map_max_lines_find
+        global.get $intersection_map_max_distance_in_lines
         f32.convert_i32_s
         f32.lt
         if
@@ -433,7 +563,7 @@
         call $check_intersection)
 
     
-    (func $get_intersection_for_angle (param $angle f32) ;;(result f32) (result f32)
+    (func $get_intersection_for_angle (param $angle f32)
         (local $vx f32)
         (local $vy f32)
         (local $loop_start f32)
@@ -475,9 +605,10 @@
             local.set $y
 
             loop $loop
+                ;; y > loop_start - intersection_map_max_distance_in_lines
                 local.get $y
                 local.get $loop_start
-                global.get $intersection_map_max_lines_find
+                global.get $intersection_map_max_distance_in_lines
                 f32.convert_i32_s
                 f32.sub
                 f32.gt
@@ -508,9 +639,10 @@
             local.set $y
 
             loop $loop
+                ;; y < loop_start + intersection_map_max_distance_in_lines
                 local.get $y
                 local.get $loop_start
-                global.get $intersection_map_max_lines_find
+                global.get $intersection_map_max_distance_in_lines
                 f32.convert_i32_s
                 f32.add
                 f32.lt
@@ -549,9 +681,10 @@
             local.set $x
 
             loop $loop
+                ;; x < loop_start + intersection_map_max_distance_in_lines
                 local.get $x
                 local.get $loop_start
-                global.get $intersection_map_max_lines_find
+                global.get $intersection_map_max_distance_in_lines
                 f32.convert_i32_s
                 f32.add
                 f32.lt
@@ -582,9 +715,10 @@
             local.set $x
 
             loop $loop
+                ;; x > loop_start - intersection_map_max_distance_in_lines
                 local.get $x
                 local.get $loop_start
-                global.get $intersection_map_max_lines_find
+                global.get $intersection_map_max_distance_in_lines
                 f32.convert_i32_s
                 f32.sub
                 f32.gt
@@ -613,13 +747,12 @@
             global.get $intersection_near_x
             global.get $intersection_near_y
             call $on_intersection_found
-        end
-        ;;f32.const 10
-        ;;f32.const 11
-    )
+        end)
 
     (func $render
         (local $ix i32)
+
+        call $render_background
 
         i32.const 0
         local.set $ix
@@ -642,10 +775,9 @@
 
                 br $loop_x
             end
-        end
-        )
+        end)
 
-    (func $render_old
+    (func $render_background
         (local $ix i32)
         (local $iy i32)
 
@@ -697,24 +829,42 @@
         end)
 
     (func $render_background_pixel (param $x i32) (param $y i32)
+        (local $shading f32)
+
+        ;; abs(y / canvas_height - 0.5) * 2
+        local.get $y
+        f32.convert_i32_s
+        global.get $canvas_height
+        f32.convert_i32_s
+        f32.div
+        f32.const 0.5
+        f32.sub
+        f32.abs
+        f32.const 2
+        f32.mul
+        local.set $shading
+
+
         local.get $y
         global.get $canvas_half_height
         i32.lt_u
         if
-            ;; render sky
+            ;; render ceil
             local.get $x
             local.get $y
-            i32.const 100
-            i32.const 150
-            i32.const 240
+            i32.const 130
+            i32.const 120
+            i32.const 110
+            local.get $shading
             call $render_pixel
         else
             ;; render floor
             local.get $x
             local.get $y
-            i32.const 170
+            i32.const 140
+            i32.const 100
             i32.const 60
-            i32.const 25
+            local.get $shading
             call $render_pixel
         end)
 
