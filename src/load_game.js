@@ -1,5 +1,5 @@
-const GAME_WIDTH = 240
-const GAME_HEIGHT = 240
+const GAME_WIDTH = 600
+const GAME_HEIGHT = 600
 
 const gameCanvas = document.getElementById('game')
 const gameContext = gameCanvas.getContext('2d')
@@ -65,8 +65,8 @@ async function loadGame() {
             frame, 
             map, map_width, map_height,
             render, update, init, 
-            player_x, player_y, player_angle_view,
-            FOV 
+            player_x, player_y,
+            FOV, intersection_map_max_distance_in_lines
         } = instance.exports
         
         console.log('memories', frame, map)
@@ -76,11 +76,12 @@ async function loadGame() {
         const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
 
+        let playerAngleView = Math.PI
         const MAP_SIZE = map_width.value * map_height.value
         const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
-        const MAP_DRAW_MULTILPLIER = 20
+        const MAP_DRAW_MULTILPLIER = 40
         const MAP_PADDING = 50
-        const MAP_MAX_LINES_INTERSECT_FIND = 4
+        const MAP_MAX_LINES_INTERSECT_FIND = intersection_map_max_distance_in_lines.value
         const WALL_CHAR_CODE = "#".charCodeAt(0)
         const FLOOR_CHAR_CODE = ".".charCodeAt(0)
 
@@ -138,9 +139,9 @@ async function loadGame() {
             gameContext.fill()
 
             // draw center view line
-            gameContext.strokeStyle = "#00000090"
-            const centerLineX = Math.sin(player_angle_view.value) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
-            const centerLineY = Math.cos(player_angle_view.value) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
+            gameContext.strokeStyle = "#ff0000"
+            const centerLineX = Math.sin(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + px
+            const centerLineY = Math.cos(playerAngleView) * MAP_DRAW_MULTILPLIER * MAP_MAX_LINES_INTERSECT_FIND + py
             gameContext.beginPath()
             gameContext.moveTo(px, py)
             gameContext.lineTo(centerLineX, centerLineY)
@@ -149,7 +150,7 @@ async function loadGame() {
 
         function drawIntersectionDot(x, y){
             gameContext.beginPath()
-            gameContext.arc(x * MAP_DRAW_MULTILPLIER + MAP_PADDING, y * MAP_DRAW_MULTILPLIER + MAP_PADDING, 1, 0, Math.PI * 2, true)
+            gameContext.arc(x * MAP_DRAW_MULTILPLIER + MAP_PADDING, y * MAP_DRAW_MULTILPLIER + MAP_PADDING, 3, 0, Math.PI * 2, true)
             gameContext.fill()
         }
 
@@ -254,13 +255,27 @@ async function loadGame() {
             // console.log(newIntersections)
 
             // const halfFOV = FOV.value / 2
-            // const fovLeft = player_angle_view.value + halfFOV
-            // const fovRight = player_angle_view.value - halfFOV
+            // const fovLeft = playerAngleView + halfFOV
+            // const fovRight = playerAngleView - halfFOV
             // 
             // for (let angle = fovLeft; angle > fovRight; angle -= 0.01){
             //     const intersection = getIntersectionForAngle(angle)
             //     if (intersection) intersections.push(intersection)
             // }
+
+            // 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
+//             const intersection = getIntersectionForAngle(playerAngleView)
+//             if (intersection) {
+//                 intersections.push(intersection)
+//                 const dvx = intersection.x - player_x.value
+//                 const dvy = intersection.y - player_y.value
+//                 const distance = Math.sqrt(dvx*dvx + dvy*dvy) * 10
+//                 const angularDiameter = 2 * Math.atan(3 / (2 * distance))
+//                 const eyeAngularDiameter = 1.91986
+// 
+//                 // console.log(1 - (angularDiameter / eyeAngularDiameter))
+//             }
+            
 
             drawCells()
             drawPlayer(newIntersections)
@@ -270,7 +285,6 @@ async function loadGame() {
         }
 
         let lastFrame = performance.now()
-        let playerAngleView = player_angle_view.value
         let w = 0, a = 0, s = 0, d = 0
         let isDrawMap = true
         function animate(){
@@ -298,6 +312,7 @@ async function loadGame() {
             if (e.key === 's') s = 1
             if (e.key === 'd') d = 1
             if (e.key === 'm') isDrawMap = !isDrawMap
+            if (e.key === 'esc') document.exitPointerLock()
         })
 
         body.addEventListener('keyup', (e) => { 
@@ -307,9 +322,23 @@ async function loadGame() {
             if (e.key === 'd') d = 0
         })
 
-        body.addEventListener('mousemove', (e) => { 
-            playerAngleView = 2 * Math.PI * (-e.clientX / 600)
+        gameCanvas.addEventListener('click', () => {
+            gameCanvas.requestPointerLock()
         })
+
+        document.addEventListener("pointerlockchange", lockChangeAlert, false)
+
+        function updatePosition(e){
+            playerAngleView -= e.movementX / 500
+        }
+
+        function lockChangeAlert() {
+            if (document.pointerLockElement === gameCanvas) {
+                document.addEventListener("mousemove", updatePosition, false)
+            } else {
+                document.removeEventListener("mousemove", updatePosition, false)
+            }
+        }
     }
 }
 

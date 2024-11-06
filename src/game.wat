@@ -11,7 +11,7 @@
     (export "map_width" (global $map_width))
     (export "map_height" (global $map_height))
     (export "FOV" (global $FOV))
-    (export "player_angle_view" (global $player_angle_view))
+    (export "intersection_map_max_distance_in_lines" (global $intersection_map_max_distance_in_lines))
 
     (import "Math" "sin" (func $sin (param f32) (result f32)))
     (import "Math" "cos" (func $cos (param f32) (result f32)))
@@ -29,14 +29,17 @@
     
     (global $player_x          (mut f32) (f32.const 3.5))
     (global $player_y          (mut f32) (f32.const 3.5))
-    (global $player_move_speed f32       (f32.const 2))
+    (global $player_move_speed f32       (f32.const 1))
     (global $player_angle_view (mut f32) (f32.const 3.1415926535))
     
-    (global $FOV            f32       (f32.const 1.0471975512)) ;; field of view between 0 and PI
-    (global $FOV_angle_step (mut f32) (f32.const 0.1))          ;; default step, need to initialize in $init function
-    
-    (global $map_width  i32 (i32.const 6))
-    (global $map_height i32 (i32.const 7))
+    (global $FOV                    f32       (f32.const 1.0472))      ;; field of view between 0 and PI
+    (global $FOV_angle_step         (mut f32) (f32.const 0.1))          ;; default step, need to initialize in $init function
+    (global $eye_angular_diameter   f32       (f32.const 1.91986))
+
+    (global $map_width                  i32 (i32.const 6))
+    (global $map_height                 i32 (i32.const 7))
+    (global $map_cell_size_in_meters    f32 (f32.const 4))
+    (global $map_wall_height_in_meters  f32 (f32.const 3))
     
     (global $intersection_last_near_distance        (mut f32) (f32.const 9999999))
     (global $intersection_near_x                    (mut f32) (f32.const 0))
@@ -48,7 +51,7 @@
     (global $min_wall_height          (mut i32)  (i32.const 0)) ;; need to calculate in $init 
     
 
-    (memory $frame 6)
+    (memory $frame 30)
     (memory $common 1)
     (memory $map 1)
     (data (memory $map) (i32.const 0)  
@@ -217,8 +220,8 @@
         (local $y_wall_start i32)
         (local $y_wall_end i32)
         (local $percent_of_intersect f32)
-        (local $half_wall_diff f32)
-        (local $acrtan_percent f32)
+        (local $angular_diameter f32)
+        (local $wall_percent_height f32)
 
         ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
         global.get $player_angle_view
@@ -238,40 +241,49 @@
         i32.eq
         if 
             ;; we have intersection, draw wall
-
-            ;; percent_of_intersect = intersection_last_near_distance / intersection_map_max_distance_in_lines
-            ;; acrtan_percent = arctan(percent_of_intersect * 20) / (pi / 2)
-            ;; half_wall_diff = (canvas_height - min_wall_height) / 2
-            ;; y_wall_start = half_wall_diff * acrtan_percent
-
             global.get $intersection_last_near_distance
             global.get $intersection_map_max_distance_in_lines
             f32.convert_i32_s
             f32.div
             local.set $percent_of_intersect
 
-            local.get $percent_of_intersect
-            f32.const 20
+            ;; angular_diameter = 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
+
+            global.get $map_wall_height_in_meters
+            f32.const 2
+            global.get $map_cell_size_in_meters
             f32.mul
-            call $atan
-            f32.const 1.5707963268 ;; pi / 2
+            global.get $intersection_last_near_distance
+            f32.mul
             f32.div
-            local.set $acrtan_percent
-                        
+            call $atan
+            f32.const 2
+            f32.mul
+            local.set $angular_diameter
+
+            f32.const 1
+            local.get $angular_diameter
+            global.get $eye_angular_diameter
+            f32.div
+            f32.sub
+            local.tee $wall_percent_height
+            f32.const 0
+            f32.lt
+            if 
+                f32.const 0
+                local.set $wall_percent_height
+            end
+
             global.get $canvas_height
             f32.convert_i32_s
-            global.get $min_wall_height
-            f32.convert_i32_s
-            f32.sub
             f32.const 2
             f32.div
-            local.set $half_wall_diff
-
-            local.get $half_wall_diff
-            local.get $acrtan_percent
+            f32.floor
+            local.get $wall_percent_height
             f32.mul
             i32.trunc_f32_s
             local.set $y_wall_start
+
 
             local.get $y_wall_start
             i32.const 0
