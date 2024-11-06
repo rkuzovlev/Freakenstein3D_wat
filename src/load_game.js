@@ -1,4 +1,4 @@
-const GAME_WIDTH = 600
+const GAME_WIDTH = 800
 const GAME_HEIGHT = 600
 
 const gameCanvas = document.getElementById('game')
@@ -56,10 +56,10 @@ async function loadGame() {
             Math
         }
 
-        // const { instance, module } = await WebAssembly.instantiate(wasmData)
-        const { instance, module } = await WebAssembly.instantiateStreaming(fetch('./game.wasm'), exportFunctions)
+        // const { instance } = await WebAssembly.instantiate(wasmData)
+        const { instance } = await WebAssembly.instantiateStreaming(fetch('./game.wasm'), exportFunctions)
     
-        console.log({ instance, module })
+        console.log(instance)
 
         const { 
             frame, 
