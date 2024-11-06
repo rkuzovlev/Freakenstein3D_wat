@@ -294,7 +294,7 @@
             end
 
 
-            global.get $canvas_width
+            global.get $canvas_height
             local.get $y_wall_start
             i32.sub
             local.set $y_wall_end
