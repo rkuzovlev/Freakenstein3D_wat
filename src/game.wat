@@ -46,10 +46,6 @@
     (global $intersection_near_y                    (mut f32) (f32.const 0))
     (global $intersection_is_found                  (mut i32) (i32.const 0))
     (global $intersection_map_max_distance_in_lines i32       (i32.const 4))
-    
-    (global $min_wall_height_percent  i32        (i32.const 10))
-    (global $min_wall_height          (mut i32)  (i32.const 0)) ;; need to calculate in $init 
-    
 
     (memory $frame 30)
     (memory $common 1)
@@ -137,18 +133,7 @@
         local.get $canvas_width
         f32.convert_i32_s
         f32.div
-        global.set $FOV_angle_step
-        
-        ;; min_wall_height = canvas_height * (min_wall_height_percent / 100)
-        global.get $canvas_height
-        f32.convert_i32_s
-        global.get $min_wall_height_percent
-        f32.convert_i32_s
-        f32.const 100
-        f32.div
-        f32.mul
-        i32.trunc_f32_s
-        global.set $min_wall_height)
+        global.set $FOV_angle_step)
 
     (func $shade_color_channel (param $color_channel_value i32) (param $shading f32) (result i32)
         local.get $color_channel_value
