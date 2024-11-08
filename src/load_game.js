@@ -307,19 +307,19 @@ async function loadGame() {
         requestAnimationFrame(animate)
 
         body.addEventListener('keydown', (e) => { 
-            if (e.key === 'w') w = 1
-            if (e.key === 'a') a = 1
-            if (e.key === 's') s = 1
-            if (e.key === 'd') d = 1
-            if (e.key === 'm') isDrawMap = !isDrawMap
-            if (e.key === 'esc') document.exitPointerLock()
+            if (e.code === 'KeyW') w = 1
+            if (e.code === 'KeyA') a = 1
+            if (e.code === 'KeyS') s = 1
+            if (e.code === 'KeyD') d = 1
+            if (e.code === 'KeyM') isDrawMap = !isDrawMap
+            if (e.code === 'Escape') document.exitPointerLock()
         })
 
         body.addEventListener('keyup', (e) => { 
-            if (e.key === 'w') w = 0
-            if (e.key === 'a') a = 0
-            if (e.key === 's') s = 0
-            if (e.key === 'd') d = 0
+            if (e.code === 'KeyW') w = 0
+            if (e.code === 'KeyA') a = 0
+            if (e.code === 'KeyS') s = 0
+            if (e.code === 'KeyD') d = 0
         })
 
         gameCanvas.addEventListener('click', () => {
