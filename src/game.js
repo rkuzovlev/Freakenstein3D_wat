@@ -1,9 +1,9 @@
 const GAME_WIDTH = 800
 const GAME_HEIGHT = 600
 
-const gameCanvas = document.getElementById('game')
+const gameCanvas = window.game
 const gameContext = gameCanvas.getContext('2d')
-const body = document.getElementsByTagName('body')[0]
+const body = document.body
 
 gameCanvas.width = GAME_WIDTH
 gameCanvas.height = GAME_HEIGHT
