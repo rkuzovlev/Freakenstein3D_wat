@@ -43,6 +43,8 @@
     (global $intersection_last_near_distance        (mut f32) (f32.const 9999999))
     (global $intersection_near_x                    (mut f32) (f32.const 0))
     (global $intersection_near_y                    (mut f32) (f32.const 0))
+    (global $intersection_cell_x                    (mut i32) (i32.const 0))
+    (global $intersection_cell_y                    (mut i32) (i32.const 0))
     (global $intersection_is_found                  (mut i32) (i32.const 0))
     (global $intersection_map_max_distance_in_lines i32       (i32.const 6))
 
@@ -147,6 +149,17 @@
         f32.div
         global.set $vertical_FOV)
 
+    (func $map_get_cell (param $x i32) (param $y i32) (result i32)
+        ;; cell_index = y * map_width + x
+        local.get $y
+        global.get $map_width
+        i32.mul
+        local.get $x
+        i32.add
+        
+        i32.load8_u (memory $map)
+    )
+
     (func $shade_color_channel (param $color_channel_value i32) (param $shading f32) (result i32)
         local.get $color_channel_value
         f32.convert_i32_s
@@ -204,21 +217,22 @@
         local.get $value
         i32.store (memory $frame))
 
-    (func $draw_wall_pixel (param $x i32) (param $y i32) (param $shading f32)
+    (func $draw_wall_pixel (param $x i32) (param $y i32) (param $wall_color i32) (param $shading f32)
         local.get $x
         local.get $y
-        i32.const 180
-        i32.const 180
-        i32.const 180
+        local.get $wall_color
+        local.get $wall_color
+        local.get $wall_color
         local.get $shading
         call $render_pixel)
     
     (func $draw_column (param $x i32)
         (local $y_wall_start i32)
         (local $y_wall_end i32)
-        (local $percent_of_intersect f32)
+        (local $shading f32)
         (local $angular_diameter f32)
         (local $wall_percent_height f32)
+        (local $wall_color i32)
 
         ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
         global.get $player_angle_view
@@ -236,13 +250,34 @@
         global.get $intersection_is_found
         i32.const 1
         i32.eq
-        if 
-            ;; we have intersection, draw wall
+        if ;; we have intersection, draw wall
+            
+            ;; set wall color based on cell index
+            global.get $intersection_cell_y
+            global.get $map_width
+            i32.mul
+            global.get $intersection_cell_x
+            i32.add
+            i32.const 2
+            i32.rem_s
+            i32.const 0
+            i32.eq 
+            if
+                i32.const 180
+                local.set $wall_color
+            else
+                i32.const 100
+                local.set $wall_color
+            end
+
+            ;; shading = 1 - (distance / max_distance)
+            f32.const 1
             global.get $intersection_last_near_distance
             global.get $intersection_map_max_distance_in_lines
             f32.convert_i32_s
             f32.div
-            local.set $percent_of_intersect
+            f32.sub
+            local.set $shading
 
             ;; angular_diameter = 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
 
@@ -304,9 +339,8 @@
                 if
                     local.get $x
                     local.get $y_wall_start
-                    f32.const 1
-                    local.get $percent_of_intersect
-                    f32.sub
+                    local.get $wall_color
+                    local.get $shading
                     call $draw_wall_pixel
 
                     ;; y_wall_start++
@@ -328,8 +362,8 @@
         (local $is_not_too_far i32) ;; boolean
         (local $is_near_then_before i32) ;; boolean
         (local $is_distance_ok i32) ;; boolean
-        (local $check_cell_x f32)
-        (local $check_cell_y f32)
+        (local $check_cell_x i32)
+        (local $check_cell_y i32)
         (local $is_wall i32) ;; boolean
         (local $is_cell_x_in_range i32) ;; boolean
         (local $is_cell_y_in_range i32) ;; boolean
@@ -408,6 +442,7 @@
         f32.div
         f32.add
         f32.floor
+        i32.trunc_f32_s
         local.set $check_cell_x
 
         ;; check_cell_y = Math.floor(y + vy / 2)
@@ -417,6 +452,7 @@
         f32.div
         f32.add
         f32.floor
+        i32.trunc_f32_s
         local.set $check_cell_y
 
         ;; is_wall = false
@@ -429,13 +465,12 @@
 
         ;; is_cell_x_in_range = check_cell_x >= 0 && check_cell_x < map_width
         local.get $check_cell_x
-        f32.const 0
-        f32.ge
+        i32.const 0
+        i32.ge_s
         if
             local.get $check_cell_x
             global.get $map_width
-            f32.convert_i32_s
-            f32.lt
+            i32.lt_s
             if
                 i32.const 1
                 local.set $is_cell_x_in_range
@@ -448,13 +483,12 @@
 
         ;; is_cell_y_in_range = check_cell_y >= 0 && check_cell_y < map_height
         local.get $check_cell_y
-        f32.const 0
-        f32.ge
+        i32.const 0
+        i32.ge_s
         if
             local.get $check_cell_y
             global.get $map_height
-            f32.convert_i32_s
-            f32.lt
+            i32.lt_s
             if
                 i32.const 1
                 local.set $is_cell_y_in_range
@@ -470,19 +504,10 @@
             i32.const 1
             i32.eq
             if
-                ;; cell_index = check_cell_y * map_width + check_cell_x
-                local.get $check_cell_y
-                global.get $map_width
-                f32.convert_i32_s
-                f32.mul
                 local.get $check_cell_x
-                f32.add
-                i32.trunc_f32_s
-                local.set $cell_index
-
-                ;; map[cell_index] === "#"
-                local.get $cell_index
-                i32.load8_u (memory $map)
+                local.get $check_cell_y
+                call $map_get_cell
+            
                 i32.const 35 ;; #
                 i32.eq
                 if
@@ -509,6 +534,12 @@
                 
                 local.get $y
                 global.set $intersection_near_y
+
+                local.get $check_cell_x
+                global.set $intersection_cell_x
+                
+                local.get $check_cell_y
+                global.set $intersection_cell_y
 
                 i32.const 1
                 global.set $intersection_is_found
@@ -594,6 +625,10 @@
         global.set $intersection_near_x
         f32.const 0
         global.set $intersection_near_y
+        i32.const 0
+        global.set $intersection_cell_x
+        i32.const 0
+        global.set $intersection_cell_y
         i32.const 0
         global.set $intersection_is_found
 
