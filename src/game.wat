@@ -27,14 +27,14 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x          (mut f32) (f32.const 3.5))
-    (global $player_y          (mut f32) (f32.const 3.5))
+    (global $player_x          (mut f32) (f32.const 2.5))
+    (global $player_y          (mut f32) (f32.const 4.5))
     (global $player_move_speed f32       (f32.const 1))
     (global $player_angle_view (mut f32) (f32.const 3.1415926535))
     
-    (global $FOV                    f32       (f32.const 1.0472))      ;; field of view between 0 and PI
-    (global $FOV_angle_step         (mut f32) (f32.const 0.1))          ;; default step, need to initialize in $init function
-    (global $eye_angular_diameter   f32       (f32.const 1.91986))
+    (global $FOV                    f32       (f32.const 1.0))      ;; field of view between 0 and PI
+    (global $FOV_angle_step         (mut f32) (f32.const 0.1))      ;; default step, need to initialize in $init function
+    (global $vertical_FOV           (mut f32) (f32.const 0.75))     ;; default value, need to initialize in $init function
 
     (global $map_width                  i32 (i32.const 6))
     (global $map_height                 i32 (i32.const 7))
@@ -118,6 +118,8 @@
         call $inc_frame_counter)
 
     (func $init (param $canvas_width i32) (param $canvas_height i32)
+        (local $ratio f32)
+
         local.get $canvas_width
         global.set $canvas_width
 
@@ -133,7 +135,22 @@
         local.get $canvas_width
         f32.convert_i32_s
         f32.div
-        global.set $FOV_angle_step)
+        global.set $FOV_angle_step
+        
+
+        ;; find canvas width/height ratio
+        local.get $canvas_width
+        f32.convert_i32_s
+        local.get $canvas_height
+        f32.convert_i32_s
+        f32.div
+        local.set $ratio
+        
+        ;; set vertical_FOV depends on canvas ratio and FOV
+        global.get $FOV
+        local.get $ratio
+        f32.div
+        global.set $vertical_FOV)
 
     (func $shade_color_channel (param $color_channel_value i32) (param $shading f32) (result i32)
         local.get $color_channel_value
@@ -248,7 +265,7 @@
 
             f32.const 1
             local.get $angular_diameter
-            global.get $eye_angular_diameter
+            global.get $vertical_FOV
             f32.div
             f32.sub
             local.tee $wall_percent_height
@@ -313,14 +330,14 @@
         (local $dvx f32)
         (local $dvy f32)
         (local $distance f32)
-        (local $is_not_too_far i32) ;; boolean 1 = true; 0 = false
-        (local $is_near_then_before i32) ;; boolean 1 = true; 0 = false
-        (local $is_distance_ok i32) ;; boolean 1 = true; 0 = false
+        (local $is_not_too_far i32) ;; boolean
+        (local $is_near_then_before i32) ;; boolean
+        (local $is_distance_ok i32) ;; boolean
         (local $check_cell_x f32)
         (local $check_cell_y f32)
-        (local $is_wall i32) ;; boolean 1 = true; 0 = false
-        (local $is_cell_x_in_range i32) ;; boolean 1 = true; 0 = false
-        (local $is_cell_y_in_range i32) ;; boolean 1 = true; 0 = false
+        (local $is_wall i32) ;; boolean
+        (local $is_cell_x_in_range i32) ;; boolean
+        (local $is_cell_y_in_range i32) ;; boolean
         (local $cell_index i32)
     
         ;; dvx = x - player_x
