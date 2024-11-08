@@ -22,7 +22,6 @@
     
     (global $canvas_width       (mut i32) (i32.const 0))
     (global $canvas_height      (mut i32) (i32.const 0))
-    (global $canvas_half_height (mut i32) (i32.const 0))
     
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
@@ -128,17 +127,11 @@
         local.get $canvas_height
         global.set $canvas_height
         
-        local.get $canvas_height
-        i32.const 2
-        i32.div_u
-        global.set $canvas_half_height
-        
         global.get $FOV
         local.get $canvas_width
         f32.convert_i32_s
         f32.div
         global.set $FOV_angle_step
-        
 
         ;; find canvas width/height ratio
         local.get $canvas_width
@@ -860,9 +853,12 @@
         f32.mul
         local.set $shading
 
-
+        ;; y < canvas_height / 2
         local.get $y
-        global.get $canvas_half_height
+        global.get $canvas_height
+        i32.const 2
+        i32.div_u
+
         i32.lt_u
         if
             ;; render ceil
