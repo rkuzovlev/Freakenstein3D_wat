@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "./node_modules/.bin/wat2wasm src/game.wat -o src/game.wasm --enable-multi-memory && node src/binary_pack.mjs",
+    "build": "./node_modules/.bin/wat2wasm src/game.wat -o src/game.wasm --enable-multi-memory && node src/wasm2png.mjs",
     "start": "./node_modules/.bin/http-server -p 8888 src/"
   },
   "author": "",
