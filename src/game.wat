@@ -36,8 +36,8 @@
     (global $FOV_angle_step         (mut f32) (f32.const 0.1))      ;; default step, need to initialize in $init function
     (global $vertical_FOV           (mut f32) (f32.const 0.75))     ;; default value, need to initialize in $init function
 
-    (global $map_width                  i32 (i32.const 6))
-    (global $map_height                 i32 (i32.const 7))
+    (global $map_width                  i32 (i32.const 7))
+    (global $map_height                 i32 (i32.const 9))
     (global $map_cell_size_in_meters    f32 (f32.const 4))
     (global $map_wall_height_in_meters  f32 (f32.const 3))
     
@@ -45,19 +45,21 @@
     (global $intersection_near_x                    (mut f32) (f32.const 0))
     (global $intersection_near_y                    (mut f32) (f32.const 0))
     (global $intersection_is_found                  (mut i32) (i32.const 0))
-    (global $intersection_map_max_distance_in_lines i32       (i32.const 4))
+    (global $intersection_map_max_distance_in_lines i32       (i32.const 6))
 
     (memory $frame 30)
     (memory $common 1)
     (memory $map 1)
     (data (memory $map) (i32.const 0)  
-        "######"
-        "#....#"
-        "#.#..#"
-        "#....#"
-        "#....#"
-        "#....#"
-        "######"
+        "#######"
+        "#.....#"
+        "#.#...#"
+        "#.....#"
+        "#.....#"
+        "#.....#"
+        "#.....#"
+        "#.....#"
+        "#######"
     )
 
     (func $update (param $delta_time f32) (param $player_angle_view f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
