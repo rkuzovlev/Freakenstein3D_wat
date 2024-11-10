@@ -42,10 +42,10 @@ async function gameInit(wasmData) {
     const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
 
-    let playerAngleView = Math.PI
+    let playerAngleView = 0
     const MAP_SIZE = map_width.value * map_height.value
     const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
-    const MAP_DRAW_MULTILPLIER = 30
+    const MAP_DRAW_MULTILPLIER = 20
     const MAP_PADDING = 50
     const MAP_MAX_LINES_INTERSECT_FIND = intersection_map_max_distance_in_lines.value
     const WALL_CHAR_CODE = "#".charCodeAt(0)

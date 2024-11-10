@@ -26,8 +26,8 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x          (mut f32) (f32.const 2.5))
-    (global $player_y          (mut f32) (f32.const 4.5))
+    (global $player_x          (mut f32) (f32.const 11.5))
+    (global $player_y          (mut f32) (f32.const 6.5))
     (global $player_move_speed f32       (f32.const 1))
     (global $player_angle_view (mut f32) (f32.const 0))
     
@@ -35,12 +35,12 @@
     (global $FOV_angle_step         (mut f32) (f32.const 0.1))      ;; default step, need to initialize in $init function
     (global $vertical_FOV           (mut f32) (f32.const 0.75))     ;; default value, need to initialize in $init function
 
-    (global $map_width                  i32 (i32.const 7))
-    (global $map_height                 i32 (i32.const 9))
+    (global $map_width                  i32 (i32.const 37))
+    (global $map_height                 i32 (i32.const 15))
     (global $map_cell_size_in_meters    f32 (f32.const 4))
     (global $map_wall_height_in_meters  f32 (f32.const 3))
     
-    (global $intersection_last_near_distance        (mut f32) (f32.const 9999999))
+    (global $intersection_last_near_distance        (mut f32) (f32.const 999999))
     (global $intersection_near_x                    (mut f32) (f32.const 0))
     (global $intersection_near_y                    (mut f32) (f32.const 0))
     (global $intersection_cell_x                    (mut i32) (i32.const 0))
@@ -52,15 +52,21 @@
     (memory $common 1)
     (memory $map 1)
     (data (memory $map) (i32.const 0)  
-        "#######"
-        "#.....#"
-        "#.#...#"
-        "#.....#"
-        "#.....#"
-        "#.....#"
-        "#.....#"
-        "#.....#"
-        "#######"
+        "#####################################"
+        "#.............#.....#.....#.....#...#"
+        "#.#.........#.#.....#.....#.....#...#"
+        "#...........#.###.#####.#####.####.##"
+        "#...........#.......................#"
+        "#.....#######.#####.##########.######"
+        "#.....#...#.#.#.........#...........#"
+        "#.......#...#.#.........#...........#"
+        "##############################.######"
+        "#...................................#"
+        "#...................................#"
+        "#...................................#"
+        "#...................................#"
+        "#...................................#"
+        "#####################################"
     )
 
     (func $move_player_by_vector (param $dx f32) (param $dy f32)
@@ -562,6 +568,7 @@
         end)
 
     (func $check_horizontal (param $y f32) (param $vx f32) (param $vy f32)
+        (local $x f32)
         ;; need to calculate
         ;; x = ((y - player_y) * vx) / vy + player_x
 
@@ -581,12 +588,24 @@
         ;; + player_x
         global.get $player_x
         f32.add
+        local.set $x
 
-        ;; x on stack
-        local.get $y
-        f32.const 0
-        local.get $vy
-        call $check_intersection)
+        local.get $x
+        f32.const 8388607 ;; magic number, max value of f32, pass checking if we exceed it
+        f32.lt
+        if
+        
+            local.get $x
+            f32.const 0
+            f32.gt
+            if
+                local.get $x
+                local.get $y
+                f32.const 0
+                local.get $vy
+                call $check_intersection
+            end
+        end)
 
     (func $check_vertical (param $x f32) (param $vx f32) (param $vy f32)
         (local $y f32)
@@ -610,12 +629,23 @@
         global.get $player_y
         f32.add
         local.set $y
-
-        local.get $x
+        
         local.get $y
-        local.get $vx
-        f32.const 0
-        call $check_intersection)
+        f32.const 8388607  ;; magic number, max value of f32, pass checking if we exceed it
+        f32.lt
+        if
+        
+            local.get $y
+            f32.const 0
+            f32.gt
+            if
+                local.get $x
+                local.get $y
+                local.get $vx
+                f32.const 0
+                call $check_intersection
+            end
+        end)
 
     
     (func $get_intersection_for_angle (param $angle f32)
@@ -634,7 +664,7 @@
         local.set $vy
 
         ;; set intersection variables to defauilts
-        f32.const 9999999
+        f32.const 999999
         global.set $intersection_last_near_distance
         f32.const 0
         global.set $intersection_near_x
