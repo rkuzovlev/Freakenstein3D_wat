@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "./node_modules/.bin/wat2wasm src/game.wat -o src/game.wasm --enable-multi-memory && node src/wasm2png.mjs",
-    "start": "./node_modules/.bin/http-server -p 8888 src/"
+    "build_game": "./node_modules/.bin/wat2wasm game/game.wat -o game/game.wasm --enable-multi-memory && node game/wasm2png.mjs",
+    "start_game": "./node_modules/.bin/http-server -p 8888 game/",
+    "start_se": "./node_modules/.bin/http-server -p 8889 sprite_editor/"
   },
   "author": "",
   "license": "ISC",
