@@ -29,7 +29,7 @@
     (global $player_x          (mut f32) (f32.const 2.5))
     (global $player_y          (mut f32) (f32.const 4.5))
     (global $player_move_speed f32       (f32.const 1))
-    (global $player_angle_view (mut f32) (f32.const 3.1415926535))
+    (global $player_angle_view (mut f32) (f32.const 0))
     
     (global $FOV                    f32       (f32.const 1.0))      ;; field of view between 0 and PI
     (global $FOV_angle_step         (mut f32) (f32.const 0.1))      ;; default step, need to initialize in $init function
@@ -46,7 +46,7 @@
     (global $intersection_cell_x                    (mut i32) (i32.const 0))
     (global $intersection_cell_y                    (mut i32) (i32.const 0))
     (global $intersection_is_found                  (mut i32) (i32.const 0))
-    (global $intersection_map_max_distance_in_lines i32       (i32.const 6))
+    (global $intersection_map_max_distance_in_lines i32       (i32.const 8))
 
     (memory $frame 30)
     (memory $common 1)
@@ -63,60 +63,75 @@
         "#######"
     )
 
-    (func $update (param $delta_time f32) (param $player_angle_view f32) (param $w i32) (param $a i32) (param $s i32) (param $d i32)
+    (func $move_player_by_vector (param $dx f32) (param $dy f32)
+        (local $rotated_x f32)
+        (local $rotated_y f32)
+
+        ;; turn dx dy vector by angle
+        ;; rotated_x = x * cos(angle) - y * sin(angle)
+        f32.const 0
+        global.get $player_angle_view
+        f32.sub
+        call $cos
+        local.get $dx
+        f32.mul
+
+        f32.const 0
+        global.get $player_angle_view
+        f32.sub
+        call $sin
+        local.get $dy
+        f32.mul
+
+        f32.sub
+        local.set $rotated_x
+
+        ;; rotated_y = x * sin(angle) + y * cos(angle)
+        f32.const 0
+        global.get $player_angle_view
+        f32.sub
+        call $sin
+        local.get $dx
+        f32.mul
+
+        f32.const 0
+        global.get $player_angle_view
+        f32.sub
+        call $cos
+        local.get $dy
+        f32.mul
+
+        f32.add
+        local.set $rotated_y
+
+        global.get $player_x
+        local.get $rotated_x
+        global.get $delta_time
+        f32.mul
+        global.get $player_move_speed
+        f32.mul
+        f32.add
+        global.set $player_x
+        
+        global.get $player_y
+        local.get $rotated_y
+        global.get $delta_time
+        f32.mul
+        global.get $player_move_speed
+        f32.mul
+        f32.add
+        global.set $player_y)
+
+    (func $update (param $delta_time f32) (param $player_angle_view f32) (param $dx f32) (param $dy f32)
         local.get $delta_time
         global.set $delta_time
 
         local.get $player_angle_view
         global.set $player_angle_view
 
-        local.get $w
-        i32.const 1
-        i32.eq
-        if
-            global.get $player_y
-            local.get $delta_time
-            global.get $player_move_speed
-            f32.mul
-            f32.sub
-            global.set $player_y
-        end
-
-        local.get $s
-        i32.const 1
-        i32.eq
-        if
-            global.get $player_y
-            local.get $delta_time
-            global.get $player_move_speed
-            f32.mul
-            f32.add
-            global.set $player_y
-        end
-
-        local.get $d
-        i32.const 1
-        i32.eq
-        if
-            global.get $player_x
-            local.get $delta_time
-            global.get $player_move_speed
-            f32.mul
-            f32.add
-            global.set $player_x
-        end
-
-        local.get $a
-        i32.const 1
-        i32.eq
-        if
-            global.get $player_x
-            local.get $delta_time
-            global.get $player_move_speed
-            f32.mul
-            f32.sub
-            global.set $player_x
-        end
+        local.get $dx
+        local.get $dy
+        call $move_player_by_vector
         
         call $inc_frame_counter)
 
@@ -632,11 +647,10 @@
         i32.const 0
         global.set $intersection_is_found
 
+        ;; for horizontal lines, we know y (y = 1, y = 2 ...)
         local.get $vy
         f32.const 0
         f32.lt
-
-        ;; for horizontal lines, we know y (y = 1, y = 2 ...)
         if 
             ;; we are looking top
             ;; loop_start = Math.floor(player_y)
@@ -672,7 +686,12 @@
                     br $loop
                 end
             end
-        else
+        end
+        
+        local.get $vy
+        f32.const 0
+        f32.gt
+        if 
             ;; we are looking bottom
             global.get $player_y
             f32.ceil
@@ -708,11 +727,10 @@
             end
         end
 
+        ;; for vertical lines, we know x (x = 1, x = 2 ...)
         local.get $vx
         f32.const 0
         f32.gt
-
-        ;; for vertical lines, we know x (x = 1, x = 2 ...)
         if 
             ;; we are looking right
             ;; loop_start = Math.ceil(player_x)
@@ -748,7 +766,12 @@
                     br $loop
                 end
             end
-        else
+        end
+        
+        local.get $vx
+        f32.const 0
+        f32.lt
+        if
             ;; we are looking left
             global.get $player_x
             f32.floor

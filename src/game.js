@@ -112,6 +112,23 @@ async function gameInit(wasmData) {
         gameContext.moveTo(px, py)
         gameContext.lineTo(centerLineX, centerLineY)
         gameContext.stroke()
+
+
+        // draw delta vector
+        const dx = a - d
+        const dy = w - s
+
+        const rotated_x = dx * Math.cos(-playerAngleView) - dy * Math.sin(-playerAngleView)
+        const rotated_y = dx * Math.sin(-playerAngleView) + dy * Math.cos(-playerAngleView)
+
+        const on_map_rotated_x = rotated_x * MAP_DRAW_MULTILPLIER + px
+        const on_map_rotated_y = rotated_y * MAP_DRAW_MULTILPLIER + py
+
+        gameContext.strokeStyle = "#00ff00"
+        gameContext.beginPath()
+        gameContext.moveTo(px, py)
+        gameContext.lineTo(on_map_rotated_x, on_map_rotated_y)
+        gameContext.stroke()
     }
 
     function drawIntersectionDot(x, y){
@@ -257,7 +274,7 @@ async function gameInit(wasmData) {
         const now = performance.now()
         const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
         // console.log('deltaTime', deltaTime, player_x.value, player_y.value)
-        update(deltaTime, playerAngleView, w, a, s, d)
+        update(deltaTime, playerAngleView, a-d, w-s)
         render()
         lastFrame = now
 
