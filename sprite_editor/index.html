@@ -4,8 +4,177 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sprite editor</title>
+
+    <style>
+        body {
+            user-select: none;
+        }
+
+        h4 {
+            margin: 0 0 10px 0;
+        }
+
+        .color_input {
+            opacity: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        .color_preview {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px transparent solid;
+        }
+
+        .color_preview.focus {
+            cursor: pointer;
+            border-color: black;
+        }
+
+        .color_select {
+            width: 16px;
+            height: 16px;
+        }
+
+        #palette {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        #palette > label {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #props {
+            margin-bottom: 20px;
+        }
+        
+        #props > label {
+            margin-right: 20px;
+        }
+
+        #canvas {
+            border: 1px black solid;
+        }
+    </style>
 </head>
 <body>
+    <div id="props">
+        <h4>Srite properties</h4>
+
+        <label for="width">
+            Width
+            <input id="width" type="number" value="10" min="1" >
+        </label>
+        <label for="height">
+            Height
+            <input id="height" type="number" value="10" min="1" >
+        </label>
+    </div>
+
+    <div id="palette">
+        <h4>Palette</h4>
+        <label for="color_0">
+            <div class="color_preview" id="color_preview_0"></div>
+            <input class="color_select" id="color_select_0" type="radio" name="color_select" checked />
+            <input class="color_input" id="color_0" type="color" value="#e66465" />
+        </label>
+        
+        <label for="color_1">
+            <div class="color_preview" id="color_preview_1"></div>
+            <input class="color_select" id="color_select_1" type="radio" name="color_select" />
+            <input class="color_input" id="color_1" type="color" value="#FF7514" />
+        </label>
+        
+        <label for="color_2">
+            <div class="color_preview" id="color_preview_2"></div>
+            <input class="color_select" id="color_select_2" type="radio" name="color_select" />
+            <input class="color_input" id="color_2" type="color" value="#A5A5A5" />
+        </label>
+        
+        <label for="color_3">
+            <div class="color_preview" id="color_preview_3"></div>
+            <input class="color_select" id="color_select_3" type="radio" name="color_select" />
+            <input class="color_input" id="color_3" type="color" value="#A12312" />
+        </label>
+        
+        <label for="color_4">
+            <div class="color_preview" id="color_preview_4"></div>
+            <input class="color_select" id="color_select_4" type="radio" name="color_select" />
+            <input class="color_input" id="color_4" type="color" value="#474B4E" />
+        </label>
+        
+        <label for="color_5">
+            <div class="color_preview" id="color_preview_5"></div>
+            <input class="color_select" id="color_select_5" type="radio" name="color_select" />
+            <input class="color_input" id="color_5" type="color" value="#F39F18" />
+        </label>
+        
+        <label for="color_6">
+            <div class="color_preview" id="color_preview_6"></div>
+            <input class="color_select" id="color_select_6" type="radio" name="color_select" />
+            <input class="color_input" id="color_6" type="color" value="#CC0605" />
+        </label>
+        
+        <label for="color_7">
+            <div class="color_preview" id="color_preview_7"></div>
+            <input class="color_select" id="color_select_7" type="radio" name="color_select" />
+            <input class="color_input" id="color_7" type="color" value="#015D52" />
+        </label>
+        
+        <label for="color_8">
+            <div class="color_preview" id="color_preview_8"></div>
+            <input class="color_select" id="color_select_8" type="radio" name="color_select" />
+            <input class="color_input" id="color_8" type="color" value="#9D9101" />
+        </label>
+        
+        <label for="color_9">
+            <div class="color_preview" id="color_preview_9"></div>
+            <input class="color_select" id="color_select_9" type="radio" name="color_select" />
+            <input class="color_input" id="color_9" type="color" value="#287233" />
+        </label>
+        
+        <label for="color_10">
+            <div class="color_preview" id="color_preview_10"></div>
+            <input class="color_select" id="color_select_10" type="radio" name="color_select" />
+            <input class="color_input" id="color_10" type="color" value="#642424" />
+        </label>
+        
+        <label for="color_11">
+            <div class="color_preview" id="color_preview_11"></div>
+            <input class="color_select" id="color_select_11" type="radio" name="color_select" />
+            <input class="color_input" id="color_11" type="color" value="#3E5F8A" />
+        </label>
+        
+        <label for="color_12">
+            <div class="color_preview" id="color_preview_12"></div>
+            <input class="color_select" id="color_select_12" type="radio" name="color_select" />
+            <input class="color_input" id="color_12" type="color" value="#EAE6CA" />
+        </label>
+        
+        <label for="color_13">
+            <div class="color_preview" id="color_preview_13"></div>
+            <input class="color_select" id="color_select_13" type="radio" name="color_select" />
+            <input class="color_input" id="color_13" type="color" value="#3BD6BF" />
+        </label>
+        
+        <label for="color_14">
+            <div class="color_preview" id="color_preview_14"></div>
+            <input class="color_select" id="color_select_14" type="radio" name="color_select" />
+            <input class="color_input" id="color_14" type="color" value="#EA5EE0" />
+        </label>
+        
+        <label for="color_15">
+            <div class="color_preview" id="color_preview_15"></div>
+            <input class="color_select" id="color_select_15" type="radio" name="color_select" />
+            <input class="color_input" id="color_15" type="color" value="#F71BB8" />
+        </label>
+    
+    </div>
+
     <canvas id="canvas"></canvas>
 
     <script src="main.js"></script>
