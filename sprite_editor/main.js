@@ -74,9 +74,9 @@ function onCanvasMouseDown(e){
 
 function onCanvasMouseMove(e){
     if (isDrawing){
-        const x = Math.floor(e.offsetX / cellSize)
-        const y = Math.floor(e.offsetY / cellSize)
-    
+        const x = Math.abs(Math.floor(e.offsetX / cellSize))
+        const y = Math.abs(Math.floor(e.offsetY / cellSize))
+
         renderSelectedColor(x, y)
         imageColors[y][x] = selectedColor
     }
@@ -93,8 +93,8 @@ body.addEventListener('mouseup', onBodyMouseUp)
 function updateDimensions(){
     widthInput.value = width
     heightInput.value = height
-    canvas.width = width * cellSize
-    canvas.height = height * cellSize
+    canvas.width = width * cellSize - 3
+    canvas.height = height * cellSize - 3
 
     if (!Array.isArray(imageColors)){
         imageColors = []
