@@ -15,7 +15,7 @@
         }
 
         h4 {
-            margin: 0 0 10px 0;
+            margin: 0;
         }
 
         .color_input {
@@ -31,9 +31,12 @@
             border: 1px transparent solid;
         }
 
-        .color_preview.focus {
-            cursor: pointer;
-            border-color: black;
+        #color_preview_transparent {
+            background-image: repeating-conic-gradient(#ffffff 0% 25%, #c6c6c6 0% 50%);
+            background-position: -1px -1px, 11px 11px;
+            background-size: 22px 22px;
+            background-color: #c6c6c6;
+            border-color: #b0b0b0;
         }
 
         .color_select {
@@ -42,7 +45,6 @@
         }
 
         #palette {
-            margin-bottom: 20px;
             position: relative;
         }
 
@@ -63,28 +65,44 @@
         #canvas {
             border: 1px black solid;
         }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .block {
+            margin-bottom: 40px;
+        }
+
+        .save_info {
+            user-select: all;
+            padding: 20px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+            overflow: hidden;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div id="props">
-        <h4>Srite properties</h4>
+    <div id="palette" class="block">
+        <div class="header">
+            <h4>Palette</h4>
+            <button id="save_palette">Save palette</button>
+            <button id="load_palette">Load palette</button>
+        </div>
 
-        <label for="width">
-            Width
-            <input id="width" type="number" value="10" min="1" >
-        </label>
-        <label for="height">
-            Height
-            <input id="height" type="number" value="10" min="1" >
-        </label>
-    </div>
+        <div class="save_info" id="palette_save_info"></div>
 
-    <div id="palette">
-        <h4>Palette</h4>
         <label for="color_0">
             <div class="color_preview" id="color_preview_0"></div>
-            <input class="color_select" id="color_select_0" type="radio" name="color_select" checked />
-            <input class="color_input" id="color_0" type="color" value="#e66465" />
+            <input class="color_select" id="color_select_0" type="radio" name="color_select" />
+            <input class="color_input" id="color_0" type="color" value="#F71BB8" />
         </label>
         
         <label for="color_1">
@@ -170,16 +188,35 @@
             <input class="color_select" id="color_select_14" type="radio" name="color_select" />
             <input class="color_input" id="color_14" type="color" value="#EA5EE0" />
         </label>
-        
-        <label for="color_15">
-            <div class="color_preview" id="color_preview_15"></div>
-            <input class="color_select" id="color_select_15" type="radio" name="color_select" />
-            <input class="color_input" id="color_15" type="color" value="#F71BB8" />
+
+        <label>
+            <div class="color_preview" id="color_preview_transparent"></div>
+            <input class="color_select" id="color_select_transparent" type="radio" name="color_select" checked />
         </label>
-    
     </div>
 
-    <canvas id="canvas"></canvas>
+    <div class="block">
+        <div class="header">
+            <h4>Canvas</h4>
+            <button id="save_canvas">Save canvas</button>
+            <button id="load_canvas">Load canvas</button>
+        </div>
+        
+        <div class="save_info" id="canvas_save_info"></div>
+        
+        <div id="props">
+            <label for="width">
+                Width
+                <input id="width" type="number" value="10" min="1" >
+            </label>
+            <label for="height">
+                Height
+                <input id="height" type="number" value="10" min="1" >
+            </label>
+        </div>
+
+        <canvas id="canvas"></canvas>
+    </div>
 
     <script src="main.js"></script>
 </body>
