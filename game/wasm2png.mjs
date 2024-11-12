@@ -5,7 +5,7 @@ const IMAGE_WIDTH = 100
 const HEADER_SIZE = 8
 
 async function pack(){
-    const wasm = fs.readFileSync('src/game.wasm')
+    const wasm = fs.readFileSync('game/game.wasm')
 
     const slicedWasm = []
     const slicedCount = Math.ceil(wasm.byteLength / 3)
@@ -48,7 +48,7 @@ async function pack(){
     
     const pngBuffer = canvas.toBuffer('image/png', { compressionLevel: 9, filters: canvas.PNG_NO_FILTERS })
 
-    fs.writeFileSync('src/game.png', pngBuffer)
+    fs.writeFileSync('game/game.png', pngBuffer)
 }
 
 pack()
