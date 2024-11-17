@@ -104,8 +104,8 @@ loadPaletteButton.addEventListener('click', function(){
     }
 })
 
-saveCanvasButton.addEventListener('click', function(){
-    let canvasBytes = "\\" + height.toString(16) + "\\" + width.toString(16)
+saveCanvasButton.addEventListener('click', async function(){
+    let canvasBytes = "\\" + height.toString(16).padStart(2, "0") + "\\" + width.toString(16).padStart(2, "0")
     let lastByte = 0
     let odd
 
@@ -117,7 +117,7 @@ saveCanvasButton.addEventListener('click', function(){
             if (odd) lastByte = lastByte << 4    
             lastByte = lastByte | colorId
             if (odd) {
-                canvasBytes += "\\" + lastByte.toString(16)
+                canvasBytes += "\\" + lastByte.toString(16).padStart(2, "0")
                 lastByte = 0
             }
         }
@@ -125,22 +125,54 @@ saveCanvasButton.addEventListener('click', function(){
 
     if (!odd) {
         lastByte = lastByte << 4
-        canvasBytes += "\\" + lastByte.toString(16)
+        canvasBytes += "\\" + lastByte.toString(16).padStart(2, "0")
     }
 
     canvasSaveInfo.style.display = "block"
     canvasSaveInfo.textContent = canvasBytes
+
+    const opts = {
+        types: [
+            {
+                description: "Sprite",
+                accept: { "text/plain": [".sprt"] },
+            },
+        ],
+    }
+
+    const handle = await window.showSaveFilePicker(opts)
+    const writableStream = await handle.createWritable()
+    await writableStream.write(canvasBytes)
+    await writableStream.close()
 })
 
-loadCanvasButton.addEventListener('click', function(){
-    // \3\5\33\3f\ff\ff\ff\ff\ff\f0
-    let canvasBytes = prompt('insert canvas wasm hex binary string')
+loadCanvasButton.addEventListener('click', async function(){
+    const opts = {
+        types: [
+            {
+                description: "Sprite",
+                accept: {
+                    "text/plain": [".sprt"],
+                },
+            },
+        ],
+        excludeAcceptAllOption: true,
+        multiple: false,
+    }
+
+    const [ fileHandle ] = await window.showOpenFilePicker(opts)
+
+    const file = await fileHandle.getFile()
+
+    const blob = new Blob([ file ])
+
+    canvasBytes = await blob.text()
 
     canvasBytes = canvasBytes.split('\\')
     canvasBytes.shift()
 
-    height = canvasBytes[0]
-    width = canvasBytes[1]
+    height = parseInt(canvasBytes[0], 16)
+    width = parseInt(canvasBytes[1], 16)
 
     canvasBytes = canvasBytes.slice(2)
 

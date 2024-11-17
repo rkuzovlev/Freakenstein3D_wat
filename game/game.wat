@@ -69,6 +69,12 @@
         "#####################################"
     )
 
+    (;SPRITES
+        test.sprt
+        2lines.sprt
+        smile.sprt
+    ;)
+
     (func $move_player_by_vector (param $dx f32) (param $dy f32)
         (local $rotated_x f32)
         (local $rotated_y f32)
