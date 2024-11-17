@@ -105,7 +105,7 @@ loadPaletteButton.addEventListener('click', function(){
 })
 
 saveCanvasButton.addEventListener('click', async function(){
-    let canvasBytes = "\\" + height.toString(16).padStart(2, "0") + "\\" + width.toString(16).padStart(2, "0")
+    let canvasBytes = "\\" + width.toString(16).padStart(2, "0") + "\\" + height.toString(16).padStart(2, "0")
     let lastByte = 0
     let odd
 
@@ -171,8 +171,8 @@ loadCanvasButton.addEventListener('click', async function(){
     canvasBytes = canvasBytes.split('\\')
     canvasBytes.shift()
 
-    height = parseInt(canvasBytes[0], 16)
-    width = parseInt(canvasBytes[1], 16)
+    width = parseInt(canvasBytes[0], 16)
+    height = parseInt(canvasBytes[1], 16)
 
     canvasBytes = canvasBytes.slice(2)
 

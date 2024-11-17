@@ -20,21 +20,38 @@ async function pack(){
     (memory $sprites 1)
     (data (memory $sprites) (i32.const 0)`
 
+    let spriteFunctins = ""
+
     let startBytes = 0
     for (let i = 0; i < sprites.length; i++){
         const sprite = sprites[i]
+        const spriteName = sprite.replace('.sprt', "")
         const spritePath = path.join(dir, 'sprites', sprite)
         const spriteContent = fs.readFileSync(spritePath, { encoding: "utf8" })
-        const bytesCount = spriteContent.split("\\").length - 1
+        const bytes = spriteContent.split("\\")
+        bytes.shift()
+        const width = parseInt(bytes[0], 16)
+        const height = parseInt(bytes[1], 16)
 
         spritesMemoryContent += `\n        (; ${sprite} ;) "${spriteContent}"`
 
-        startBytes += bytesCount
+        spriteFunctins += `
+        (; ${sprite} ;)
+        (func $get_sprite_${spriteName} (result (; $width ;) i32) (result (; $height ;) i32) (result (; $pointer ;) i32)
+            i32.const ${width}
+            i32.const ${height}
+            i32.const ${startBytes + 2}
+        )
+        `
+        
+        startBytes += bytes.length
     }
 
     spritesMemoryContent += '\n    )'
 
-    const wat_prepared = wat.replace(spritesRegular, spritesMemoryContent)
+    const newContent = spritesMemoryContent + "\n\n" + spriteFunctins
+
+    const wat_prepared = wat.replace(spritesRegular, newContent)
 
     fs.writeFileSync(dir + '/game.wat_prepared', wat_prepared)
 }
