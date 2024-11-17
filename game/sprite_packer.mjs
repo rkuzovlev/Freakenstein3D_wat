@@ -4,7 +4,7 @@ import { createCanvas, ImageData } from 'canvas'
 
 const dir = import.meta.dirname
 
-const spritesRegular = /\(;SPRITES(.*);\)/s
+const spritesRegular = /\(;SPRITES(.*?);\)/s
 
 async function pack(){
     const wat = fs.readFileSync(dir + '/game.wat', { encoding: "utf8" })

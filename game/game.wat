@@ -69,6 +69,11 @@
         "#####################################"
     )
 
+    (memory $palettes 1)
+    (data (memory $palettes) (i32.const 0)  
+        (; default palette 0 ;) "\f7\1b\b8\ff\75\14\a5\a5\a5\a1\23\12\47\4b\4e\f3\9f\18\cc\06\05\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+    )
+
     (;SPRITES
         test.sprt
         2lines.sprt
@@ -184,16 +189,14 @@
         local.get $x
         i32.add
         
-        i32.load8_u (memory $map)
-    )
+        i32.load8_u (memory $map))
 
     (func $shade_color_channel (param $color_channel_value i32) (param $shading f32) (result i32)
         local.get $color_channel_value
         f32.convert_i32_s
         local.get $shading
         f32.mul
-        i32.trunc_f32_s
-    )
+        i32.trunc_f32_s)
 
     (func $render_pixel (param $x i32) (param $y i32) (param $r i32) (param $g i32) (param $b i32) (param $shading f32)
         (local $offset i32)
@@ -379,8 +382,7 @@
                     br $loop_y
                 end
             end
-        end
-    )
+        end)
 
     (func $check_intersection (param $x f32) (param $y f32) (param $vx f32) (param $vy f32)
         (local $dvx f32)
@@ -856,6 +858,11 @@
         (local $ix i32)
 
         call $render_background
+        call $render_columns
+        call $render_smile)
+
+    (func $render_columns
+        (local $ix i32)
 
         i32.const 0
         local.set $ix
@@ -877,6 +884,142 @@
                 local.set $ix
 
                 br $loop_x
+            end
+        end)
+    
+    (func $render_sprite_color (param $x i32) (param $y i32) (param $palette i32) (param $sprite_pointer i32) (param $color_index i32)
+        (local $color_palette_index i32)
+        (local $r i32)
+        (local $g i32)
+        (local $b i32)
+
+        local.get $sprite_pointer
+        local.get $color_index
+        i32.const 2
+        i32.div_s
+        i32.add
+        i32.load8_u (memory $sprites)
+        local.set $color_palette_index
+
+        local.get $color_index
+        i32.const 2
+        i32.rem_s
+        i32.const 0
+        i32.eq
+        if
+            ;; is even
+            local.get $color_palette_index
+            i32.const 4
+            i32.shr_u
+            local.set $color_palette_index
+        else
+            ;; is odd
+            local.get $color_palette_index
+            i32.const 0x0f
+            i32.and
+            local.set $color_palette_index
+        end
+
+        local.get $color_palette_index
+        i32.const 0x0f
+        i32.ne
+        if
+            local.get $palette
+            i32.const 45
+            i32.mul
+            local.get $color_palette_index
+            i32.const 3
+            i32.mul
+            i32.add
+            local.set $color_palette_index
+            
+            local.get $color_palette_index
+            i32.load8_u (memory $palettes)
+            local.set $r
+
+            local.get $color_palette_index
+            i32.const 1
+            i32.add
+            i32.load8_u (memory $palettes)
+            local.set $g
+
+            local.get $color_palette_index
+            i32.const 2
+            i32.add
+            i32.load8_u (memory $palettes)
+            local.set $b
+
+            local.get $x
+            local.get $y
+            local.get $r
+            local.get $g
+            local.get $b
+            f32.const 1
+            call $render_pixel
+        end)
+
+    (func $render_smile
+        (local $iy i32)
+        (local $ix i32)
+        (local $width i32)
+        (local $height i32)
+        (local $pointer i32)
+    
+        i32.const 0
+        local.set $iy
+
+        i32.const 0
+        local.set $ix
+
+        call $get_sprite_smile ;; width height pointer
+        local.set $pointer
+        local.set $height
+        local.set $width
+
+        loop $loop_y
+            local.get $iy
+            local.get $height
+            i32.lt_u
+            if
+                ;; reset ix
+                i32.const 0
+                local.set $ix
+                
+                ;; loop by pixel in line
+                loop $loop_x
+                    local.get $ix
+                    local.get $width
+                    i32.lt_u
+
+                    if
+                        local.get $ix
+                        local.get $iy
+                        i32.const 0 ;; palette 0
+                        local.get $pointer
+                        local.get $iy
+                        local.get $width
+                        i32.mul
+                        local.get $ix
+                        i32.add
+                        call $render_sprite_color
+
+                        ;; ix++
+                        local.get $ix
+                        i32.const 1
+                        i32.add
+                        local.set $ix
+
+                        br $loop_x
+                    end
+                end
+
+                ;; iy++
+                local.get $iy
+                i32.const 1
+                i32.add
+                local.set $iy
+
+                br $loop_y
             end
         end)
 
