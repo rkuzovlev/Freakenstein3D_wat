@@ -32,15 +32,18 @@ async function pack(){
         bytes.shift()
         const width = parseInt(bytes[0], 16)
         const height = parseInt(bytes[1], 16)
+        bytes.shift()
+        bytes.shift()
+        const spriteOnlyPixels = "\\" + bytes.join('\\')
 
-        spritesMemoryContent += `\n        (; ${sprite} ;) "${spriteContent}"`
+        spritesMemoryContent += `\n        (; ${sprite} ;) "${spriteOnlyPixels}"`
 
         spriteFunctins += `
         (; ${sprite} ;)
         (func $get_sprite_${spriteName} (result (; $width ;) i32) (result (; $height ;) i32) (result (; $pointer ;) i32)
             i32.const ${width}
             i32.const ${height}
-            i32.const ${startBytes + 2}
+            i32.const ${startBytes}
         )
         `
         
