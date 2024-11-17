@@ -8,7 +8,6 @@ const paletteSaveInfo = document.getElementById('palette_save_info')
 
 const saveCanvasButton = document.getElementById('save_canvas')
 const loadCanvasButton = document.getElementById('load_canvas')
-const canvasSaveInfo = document.getElementById('canvas_save_info')
 
 const context = canvas.getContext('2d')
 const cellSize = 30
@@ -128,9 +127,6 @@ saveCanvasButton.addEventListener('click', async function(){
         canvasBytes += "\\" + lastByte.toString(16).padStart(2, "0")
     }
 
-    canvasSaveInfo.style.display = "block"
-    canvasSaveInfo.textContent = canvasBytes
-
     const opts = {
         types: [
             {
@@ -174,6 +170,8 @@ loadCanvasButton.addEventListener('click', async function(){
     width = parseInt(canvasBytes[0], 16)
     height = parseInt(canvasBytes[1], 16)
 
+    updateDimensions()
+
     canvasBytes = canvasBytes.slice(2)
 
     const colors = []
@@ -190,7 +188,6 @@ loadCanvasButton.addEventListener('click', async function(){
         }
     }
 
-    updateDimensions()
     updateCanvas()
 })
 
