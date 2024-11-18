@@ -69,17 +69,6 @@
         "#####################################"
     )
 
-    (memory $palettes 1)
-    (data (memory $palettes) (i32.const 0)  
-        (; default palette 0 ;) "\f7\1b\b8\ff\75\14\a5\a5\a5\a1\23\12\47\4b\4e\f3\9f\18\cc\06\05\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
-    )
-
-    (;SPRITES
-        test.sprt
-        2lines.sprt
-        smile.sprt
-    ;)
-
     (func $move_player_by_vector (param $dx f32) (param $dy f32)
         (local $rotated_x f32)
         (local $rotated_y f32)
@@ -1122,4 +1111,15 @@
         global.get $frame_counter
         i32.add
         global.set $frame_counter)
+
+    (memory $palettes 1)
+    (data (memory $palettes) (i32.const 0)  
+        (; default palette 0 ;) "\f7\1b\b8\ff\75\14\a5\a5\a5\a1\23\12\47\4b\4e\f3\9f\18\cc\06\05\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+    )
+
+    (;SPRITES
+        test.sprt
+        2lines.sprt
+        smile.sprt
+    ;)
 )
