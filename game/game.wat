@@ -236,22 +236,23 @@
         local.get $value
         i32.store (memory $frame))
 
-    (func $draw_wall_pixel (param $x i32) (param $y i32) (param $wall_color i32) (param $shading f32)
-        local.get $x
-        local.get $y
-        local.get $wall_color
-        local.get $wall_color
-        local.get $wall_color
-        local.get $shading
-        call $render_pixel)
-    
+
     (func $draw_column (param $x i32)
+        (local $iy i32)
         (local $y_wall_start i32)
         (local $y_wall_end i32)
         (local $shading f32)
         (local $angular_diameter f32)
-        (local $wall_percent_height f32)
-        (local $wall_color i32)
+        (local $wall_percent_start f32)
+        (local $wall_height i32)
+        (local $s_width i32)
+        (local $s_height i32)
+        (local $s_pointer i32)
+        (local $r i32)
+        (local $g i32)
+        (local $b i32)
+        (local $wall_x i32)
+        (local $intersection_fraction f32)
 
         ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
         global.get $player_angle_view
@@ -270,24 +271,13 @@
         i32.const 1
         i32.eq
         if ;; we have intersection, draw wall
-            
-            ;; set wall color based on cell index
-            global.get $intersection_cell_y
-            global.get $map_width
-            i32.mul
-            global.get $intersection_cell_x
-            i32.add
-            i32.const 2
-            i32.rem_s
-            i32.const 0
-            i32.eq 
-            if
-                i32.const 180
-                local.set $wall_color
-            else
-                i32.const 100
-                local.set $wall_color
-            end
+            call $get_sprite_wall
+            local.set $s_pointer
+            local.set $s_height
+            local.set $s_width
+
+            call $get_intersection_fraction
+            local.set $intersection_fraction
 
             ;; shading = 1 - (distance / max_distance)
             f32.const 1
@@ -317,12 +307,12 @@
             global.get $vertical_FOV
             f32.div
             f32.sub
-            local.tee $wall_percent_height
+            local.tee $wall_percent_start
             f32.const 0
             f32.lt
             if 
                 f32.const 0
-                local.set $wall_percent_height
+                local.set $wall_percent_start
             end
 
             global.get $canvas_height
@@ -330,7 +320,7 @@
             f32.const 2
             f32.div
             f32.floor
-            local.get $wall_percent_height
+            local.get $wall_percent_start
             f32.mul
             i32.trunc_f32_s
             local.set $y_wall_start
@@ -350,28 +340,82 @@
             i32.sub
             local.set $y_wall_end
 
+            local.get $y_wall_end
+            local.get $y_wall_start
+            i32.sub
+            local.set $wall_height
+
+            local.get $y_wall_start
+            local.set $iy
+
             loop $loop_y
-                local.get $y_wall_start
+                local.get $iy
                 local.get $y_wall_end
                 i32.lt_u
 
                 if
-                    local.get $x
-                    local.get $y_wall_start
-                    local.get $wall_color
-                    local.get $shading
-                    call $draw_wall_pixel
+                    local.get $s_width
+                    local.get $s_height
+                    
+                    ;; x [0-1)
+                    local.get $intersection_fraction
 
-                    ;; y_wall_start++
+                    ;; y [0-1)
+                    local.get $iy
                     local.get $y_wall_start
+                    i32.sub
+                    f32.convert_i32_s
+                    local.get $wall_height
+                    f32.convert_i32_s
+                    f32.div
+
+                    f32.const 0.1 ;; tsx
+                    f32.const 0.1 ;; tsy
+
+                    i32.const 0 ;; palette
+                    local.get $s_pointer
+                    call $get_sprite_color
+                    local.set $b
+                    local.set $g
+                    local.set $r
+
+                    local.get $x
+                    local.get $iy
+                    local.get $r
+                    local.get $g
+                    local.get $b
+                    local.get $shading
+                    call $render_pixel
+
+                    ;; iy++
+                    local.get $iy
                     i32.const 1
                     i32.add
-                    local.set $y_wall_start
+                    local.set $iy
 
                     br $loop_y
                 end
             end
         end)
+
+    (func $get_intersection_fraction (result f32)
+        (local $r f32)
+
+        global.get $intersection_near_x
+        global.get $intersection_near_x
+        f32.floor
+        f32.ne
+        if
+            global.get $intersection_near_x
+            call $fract
+            local.set $r
+        else
+            global.get $intersection_near_y
+            call $fract
+            local.set $r
+        end
+
+        local.get $r)
 
     (func $check_intersection (param $x f32) (param $y f32) (param $vx f32) (param $vy f32)
         (local $dvx f32)
@@ -844,11 +888,10 @@
         end)
 
     (func $render
-        (local $ix i32)
-
         call $render_background
         call $render_columns
-        call $render_smile)
+        ;;call $render_smile
+    )
 
     (func $render_columns
         (local $ix i32)
@@ -875,7 +918,154 @@
                 br $loop_x
             end
         end)
+
+    (func $fract (param $num f32) (result f32)
+        local.get $num
+        local.get $num
+        f32.floor
+        f32.sub)
     
+    (func $round (param $num f32) (result f32)
+        local.get $num
+        call $fract
+        f32.const 0.5
+        f32.ge
+        if
+            local.get $num
+            f32.ceil
+            return
+        end
+
+        local.get $num
+        f32.floor)
+
+    (func $get_texcoord (param $max i32) (param $d f32) (param $texture_size f32) (result i32)
+        (local $d_normalized f32)
+
+        local.get $d
+        local.get $texture_size
+        f32.div
+        call $fract
+        local.tee $d_normalized
+        f32.const 0
+        f32.lt
+        if 
+            f32.const 1
+            local.get $d_normalized
+            f32.sub
+            local.set $d_normalized
+        end
+
+        local.get $max
+        i32.const 1
+        i32.sub
+        f32.convert_i32_s
+        local.get $d_normalized
+        f32.mul
+        call $round
+        i32.trunc_f32_s)
+
+    (;
+    ;   $sw - sprite width
+    ;   $sh - sprite height
+    ;   $x - sprite color position x [0; 1)
+    ;   $y - sprite color position y [0; 1)
+    ;   $tsx - texture size by x default 1
+    ;   $tsy - texture size by y default 1
+    ;   $palette - palette number
+    ;   $sprite_pointer 
+    ;
+    ;   result r g b i32
+    ;)
+    (func $get_sprite_color (param $sw i32) (param $sh i32) (param $x f32) (param $y f32) (param $tsx f32) (param $tsy f32) (param $palette i32) (param $sprite_pointer i32) (result i32) (result i32) (result i32)
+        (local $color_palette_index i32)
+        (local $r i32)
+        (local $g i32)
+        (local $b i32)
+        (local $tex_coord_x i32)
+        (local $tex_coord_y i32)
+        (local $color_index i32)
+
+        local.get $sw
+        local.get $x
+        local.get $tsx
+        call $get_texcoord
+        local.set $tex_coord_x
+
+        local.get $sh
+        local.get $y
+        local.get $tsy
+        call $get_texcoord
+        local.set $tex_coord_y
+
+        local.get $tex_coord_y
+        local.get $sw
+        i32.mul
+        local.get $tex_coord_x
+        i32.add
+        local.set $color_index
+
+        local.get $sprite_pointer
+        local.get $color_index
+        i32.const 2
+        i32.div_s
+        i32.add
+        i32.load8_u (memory $sprites)
+        local.set $color_palette_index
+
+        local.get $color_index
+        i32.const 2
+        i32.rem_s
+        i32.const 0
+        i32.eq
+        if
+            ;; is even
+            local.get $color_palette_index
+            i32.const 4
+            i32.shr_u
+            local.set $color_palette_index
+        else
+            ;; is odd
+            local.get $color_palette_index
+            i32.const 0x0f
+            i32.and
+            local.set $color_palette_index
+        end
+
+        local.get $color_palette_index
+        i32.const 0x0f
+        i32.ne
+        if
+            local.get $palette
+            i32.const 45
+            i32.mul
+            local.get $color_palette_index
+            i32.const 3
+            i32.mul
+            i32.add
+            local.set $color_palette_index
+            
+            local.get $color_palette_index
+            i32.load8_u (memory $palettes)
+            local.set $r
+
+            local.get $color_palette_index
+            i32.const 1
+            i32.add
+            i32.load8_u (memory $palettes)
+            local.set $g
+
+            local.get $color_palette_index
+            i32.const 2
+            i32.add
+            i32.load8_u (memory $palettes)
+            local.set $b
+        end
+        
+        local.get $r
+        local.get $g
+        local.get $b)
+
     (func $render_sprite_color (param $x i32) (param $y i32) (param $palette i32) (param $sprite_pointer i32) (param $color_index i32)
         (local $color_palette_index i32)
         (local $r i32)
@@ -948,6 +1138,9 @@
         end)
 
     (func $render_smile
+        (local $r i32)
+        (local $g i32)
+        (local $b i32)
         (local $iy i32)
         (local $ix i32)
         (local $width i32)
@@ -967,30 +1160,52 @@
 
         loop $loop_y
             local.get $iy
-            local.get $height
+            i32.const 500
             i32.lt_u
             if
                 ;; reset ix
                 i32.const 0
                 local.set $ix
-                
+
                 ;; loop by pixel in line
                 loop $loop_x
                     local.get $ix
-                    local.get $width
+                    i32.const 300
                     i32.lt_u
 
                     if
-                        local.get $ix
-                        local.get $iy
-                        i32.const 0 ;; palette 0
-                        local.get $pointer
-                        local.get $iy
                         local.get $width
-                        i32.mul
+                        local.get $height
+                        
+                        ;; x [0-1)
                         local.get $ix
-                        i32.add
-                        call $render_sprite_color
+                        f32.convert_i32_s
+                        f32.const 300
+                        f32.div
+
+                        ;; y [0-1)
+                        local.get $iy
+                        f32.convert_i32_s
+                        f32.const 500
+                        f32.div
+
+                        f32.const 1 ;; tsx
+                        f32.const 1 ;; tsy
+
+                        i32.const 0 ;; palette
+                        local.get $pointer
+                        call $get_sprite_color
+                        local.set $b
+                        local.set $g
+                        local.set $r
+
+                        local.get $ix
+                        local.get $iy
+                        local.get $r
+                        local.get $g
+                        local.get $b
+                        f32.const 1
+                        call $render_pixel
 
                         ;; ix++
                         local.get $ix
@@ -1114,12 +1329,13 @@
 
     (memory $palettes 1)
     (data (memory $palettes) (i32.const 0)  
-        (; default palette 0 ;) "\f7\1b\b8\ff\75\14\a5\a5\a5\a1\23\12\47\4b\4e\f3\9f\18\cc\06\05\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; default palette 0 ;) "\ff\ff\ff\d3\d3\d3\78\78\78\68\68\68\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
     )
 
     (;SPRITES
         test.sprt
         2lines.sprt
         smile.sprt
+        wall.sprt
     ;)
 )
