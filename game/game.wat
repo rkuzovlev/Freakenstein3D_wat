@@ -26,8 +26,8 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x          (mut f32) (f32.const 11.5))
-    (global $player_y          (mut f32) (f32.const 6.5))
+    (global $player_x          (mut f32) (f32.const 5.5))
+    (global $player_y          (mut f32) (f32.const 3.5))
     (global $player_move_speed f32       (f32.const 1))
     (global $player_angle_view (mut f32) (f32.const 0))
     
@@ -51,22 +51,26 @@
     (memory $frame 30)
     (memory $common 1)
     (memory $map 1)
+    (;
+        0 - brick wall
+        1 - room wall
+    ;)
     (data (memory $map) (i32.const 0)  
-        "#####################################"
-        "#.............#.....#.....#.....#...#"
-        "#.#.........#.#.....#.....#.....#...#"
-        "#...........#.###.#####.#####.####.##"
-        "#...........#.......................#"
-        "#.....#######.#####.##########.######"
-        "#.....#...#.#.#.........#...........#"
-        "#.......#...#.#.........#...........#"
-        "##############################.######"
-        "#...................................#"
-        "#...................................#"
-        "#...................................#"
-        "#...................................#"
-        "#...................................#"
-        "#####################################"
+        "1111000000000000000000000000000000000"
+        "1..10.........0.....0.....0.....0...0"
+        "1...........0.0.....0.....0.....0...0"
+        "1..10.......0.000.00000.00000.0000.00"
+        "01110.......0.......................0"
+        "00000.......0.00000.0000000000.000000"
+        "0...........0.0.........0...........0"
+        "0...........0.0.........0...........0"
+        "000000000000000000000000000000.000000"
+        "0...................................0"
+        "0...................................0"
+        "0...................................0"
+        "0...................................0"
+        "0...................................0"
+        "0000000000000000000000000000000000000"
     )
 
     (func $move_player_by_vector (param $dx f32) (param $dy f32)
@@ -236,6 +240,35 @@
         local.get $value
         i32.store (memory $frame))
 
+    (func $get_wall_sprite_based_on_map_cell (param $x i32) (param $y i32) (result (; width ;) i32) (result (; height ;) i32) (result (; sprite pointer ;) i32) (result (; tsx ;) f32) (result (; tsy ;) f32)
+        (local $cell i32)
+
+        local.get $x
+        local.get $y
+        call $map_get_cell
+        
+        local.tee $cell
+        
+        i32.const 48 ;; 0
+        i32.eq
+        if
+            call $get_sprite_brick_wall
+            f32.const 0.1
+            f32.const 0.1
+            return
+        end
+
+        local.get $cell
+        i32.const 49 ;; 1
+        i32.eq
+        if
+            call $get_sprite_room_wall
+            f32.const 1
+            f32.const 1
+            return
+        end
+
+        unreachable)
 
     (func $draw_column (param $x i32)
         (local $iy i32)
@@ -253,6 +286,8 @@
         (local $b i32)
         (local $wall_x i32)
         (local $intersection_fraction f32)
+        (local $tsx f32)
+        (local $tsy f32)
 
         ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
         global.get $player_angle_view
@@ -271,7 +306,11 @@
         i32.const 1
         i32.eq
         if ;; we have intersection, draw wall
-            call $get_sprite_wall
+            global.get $intersection_cell_x
+            global.get $intersection_cell_y
+            call $get_wall_sprite_based_on_map_cell
+            local.set $tsy
+            local.set $tsx
             local.set $s_pointer
             local.set $s_height
             local.set $s_width
@@ -369,10 +408,10 @@
                     f32.convert_i32_s
                     f32.div
 
-                    f32.const 0.1 ;; tsx
-                    f32.const 0.1 ;; tsy
+                    local.get $tsx
+                    local.get $tsy
 
-                    i32.const 0 ;; palette
+                    i32.const 1 ;; walls palette
                     local.get $s_pointer
                     call $get_sprite_color
                     local.set $b
@@ -430,6 +469,7 @@
         (local $is_cell_x_in_range i32) ;; boolean
         (local $is_cell_y_in_range i32) ;; boolean
         (local $cell_index i32)
+        (local $cell i32)
     
         ;; dvx = x - player_x
         local.get $x
@@ -569,8 +609,18 @@
                 local.get $check_cell_x
                 local.get $check_cell_y
                 call $map_get_cell
-            
-                i32.const 35 ;; #
+                
+                local.tee $cell
+                
+                i32.const 48 ;; 0
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 49 ;; 1
                 i32.eq
                 if
                     i32.const 1
@@ -1329,13 +1379,15 @@
 
     (memory $palettes 1)
     (data (memory $palettes) (i32.const 0)  
-        (; default palette 0 ;) "\ff\ff\ff\d3\d3\d3\78\78\78\68\68\68\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; default palette 0 ;) "\ff\ff\ff\d3\d3\d3\78\78\78\9f\59\2d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; walls palette 1 ;) "\78\78\78\9f\59\2d\25\5c\14\cd\c7\1d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
     )
 
     (;SPRITES
         test.sprt
         2lines.sprt
         smile.sprt
-        wall.sprt
+        brick_wall.sprt
+        room_wall.sprt
     ;)
 )

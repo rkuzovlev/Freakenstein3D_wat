@@ -42,14 +42,16 @@ async function gameInit(wasmData) {
     const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
 
-    let playerAngleView = 0
+    let playerAngleView = Math.PI
     const MAP_SIZE = map_width.value * map_height.value
     const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
     const MAP_DRAW_MULTILPLIER = 20
     const MAP_PADDING = 50
     const MAP_MAX_LINES_INTERSECT_FIND = intersection_map_max_distance_in_lines.value
-    const WALL_CHAR_CODE = "#".charCodeAt(0)
+    const BRICK_WALL_CHAR_CODE = "0".charCodeAt(0)
+    const ROOM_WALL_CHAR_CODE = "1".charCodeAt(0)
     const FLOOR_CHAR_CODE = ".".charCodeAt(0)
+    const WALLS = [BRICK_WALL_CHAR_CODE, ROOM_WALL_CHAR_CODE]
 
     function drawCell(cellX, cellY, type){
         const x = cellX * MAP_DRAW_MULTILPLIER + MAP_PADDING
@@ -60,11 +62,22 @@ async function gameInit(wasmData) {
         gameContext.beginPath()
         gameContext.rect(x, y, MAP_DRAW_MULTILPLIER, MAP_DRAW_MULTILPLIER)
         switch (type) {
-            case WALL_CHAR_CODE: {
+            case BRICK_WALL_CHAR_CODE: {
                 gameContext.fill()
+                gameContext.fillStyle = "#000000"
+                gameContext.fillText('0', x + 0.35 * MAP_DRAW_MULTILPLIER , y + 0.65 * MAP_DRAW_MULTILPLIER)
                 gameContext.stroke()
                 break
             }
+
+            case ROOM_WALL_CHAR_CODE: {
+                gameContext.fill()
+                gameContext.fillStyle = "#000000"
+                gameContext.fillText('1', x + 0.35 * MAP_DRAW_MULTILPLIER , y + 0.65 * MAP_DRAW_MULTILPLIER)
+                gameContext.stroke()
+                break
+            }
+
             case FLOOR_CHAR_CODE: {
                 gameContext.stroke()
                 break
@@ -159,7 +172,7 @@ async function gameInit(wasmData) {
         if (isCellXInRange && isCellYInRange){
             const cellIndex = checkCellY * map_width.value + checkCellX
             const cell = MAP_BUFFER[cellIndex]
-            isWall = cell === WALL_CHAR_CODE
+            isWall = WALLS.includes(cell)
         }
 
         if (isDistanceOk && isWall){
