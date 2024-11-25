@@ -1135,64 +1135,74 @@
         local.get $b
         local.get $is_transparent)
 
-    (func $render_smile
+    (func $render_sprite_on_screen (param $x i32) (param $y i32) (param $width i32) (param $height i32) (param $s_width i32) (param $s_height i32) (param $s_pointer i32)
         (local $r i32)
         (local $g i32)
         (local $b i32)
         (local $transparent i32)
         (local $iy i32)
         (local $ix i32)
-        (local $width i32)
-        (local $height i32)
-        (local $pointer i32)
+        (local $x_to i32)
+        (local $y_to i32)
     
-        i32.const 0
+        local.get $y
         local.set $iy
 
-        i32.const 0
+        local.get $y
+        local.get $height
+        i32.add
+        local.set $y_to
+
+        local.get $x
         local.set $ix
 
-        call $get_sprite_smile ;; width height pointer
-        local.set $pointer
-        local.set $height
-        local.set $width
+        local.get $x
+        local.get $width
+        i32.add
+        local.set $x_to
 
         loop $loop_y
             local.get $iy
-            i32.const 500
+            local.get $y_to
             i32.lt_u
             if
                 ;; reset ix
-                i32.const 0
+                local.get $x
                 local.set $ix
 
                 ;; loop by pixel in line
                 loop $loop_x
                     local.get $ix
-                    i32.const 300
+                    local.get $x_to
                     i32.lt_u
 
                     if
-                        local.get $width
-                        local.get $height
+                        local.get $s_width
+                        local.get $s_height
                         
                         ;; x [0-1)
                         local.get $ix
+                        local.get $x
+                        i32.sub
                         f32.convert_i32_s
-                        f32.const 300
+                        local.get $width
+                        f32.convert_i32_s
                         f32.div
 
                         ;; y [0-1)
                         local.get $iy
+                        local.get $y
+                        i32.sub
                         f32.convert_i32_s
-                        f32.const 500
+                        local.get $height
+                        f32.convert_i32_s
                         f32.div
 
                         f32.const 1 ;; tsx
                         f32.const 1 ;; tsy
 
                         i32.const 0 ;; palette
-                        local.get $pointer
+                        local.get $s_pointer
                         call $get_sprite_color
                         local.set $transparent
                         local.set $b
@@ -1231,6 +1241,42 @@
                 br $loop_y
             end
         end)
+
+    (func $render_smile
+        (local $width i32)
+        (local $height i32)
+        (local $pointer i32)
+    
+        call $get_sprite_smile ;; width height pointer
+        local.set $pointer
+        local.set $height
+        local.set $width
+        
+        ;; x
+        global.get $canvas_width
+        i32.const 2
+        i32.div_s
+        i32.const 400
+        i32.const 2
+        i32.div_s
+        i32.sub
+        
+        ;; y
+        global.get $canvas_height
+        i32.const 2
+        i32.div_s
+        i32.const 200
+        i32.const 2
+        i32.div_s
+        i32.sub
+        
+        i32.const 400
+        i32.const 200
+        local.get $width
+        local.get $height
+        local.get $pointer
+        call $render_sprite_on_screen
+    )
 
     (func $render_background
         (local $ix i32)
