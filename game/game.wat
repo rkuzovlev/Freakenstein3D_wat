@@ -951,7 +951,7 @@
     (func $render
         call $render_background
         call $render_columns
-        ;;call $render_smile
+        ;;call $render_crosshair
     )
 
     (func $render_columns
@@ -1135,7 +1135,7 @@
         local.get $b
         local.get $is_transparent)
 
-    (func $render_sprite_on_screen (param $x i32) (param $y i32) (param $width i32) (param $height i32) (param $s_width i32) (param $s_height i32) (param $s_pointer i32)
+    (func $render_sprite_on_screen (param $x i32) (param $y i32) (param $width i32) (param $height i32) (param $s_width i32) (param $s_height i32) (param $s_pointer i32) (param $palette i32)
         (local $r i32)
         (local $g i32)
         (local $b i32)
@@ -1201,7 +1201,7 @@
                         f32.const 1 ;; tsx
                         f32.const 1 ;; tsy
 
-                        i32.const 0 ;; palette
+                        local.get $palette
                         local.get $s_pointer
                         call $get_sprite_color
                         local.set $transparent
@@ -1242,12 +1242,12 @@
             end
         end)
 
-    (func $render_smile
+    (func $render_crosshair
         (local $width i32)
         (local $height i32)
         (local $pointer i32)
     
-        call $get_sprite_smile ;; width height pointer
+        call $get_sprite_crosshair
         local.set $pointer
         local.set $height
         local.set $width
@@ -1256,7 +1256,7 @@
         global.get $canvas_width
         i32.const 2
         i32.div_s
-        i32.const 400
+        local.get $width
         i32.const 2
         i32.div_s
         i32.sub
@@ -1265,16 +1265,17 @@
         global.get $canvas_height
         i32.const 2
         i32.div_s
-        i32.const 200
+        local.get $height
         i32.const 2
         i32.div_s
         i32.sub
         
-        i32.const 400
-        i32.const 200
+        i32.const 12
+        i32.const 12
         local.get $width
         local.get $height
         local.get $pointer
+        i32.const 0
         call $render_sprite_on_screen
     )
 
@@ -1390,5 +1391,6 @@
         smile.sprt
         brick_wall.sprt
         room_wall.sprt
+        crosshair.sprt
     ;)
 )
