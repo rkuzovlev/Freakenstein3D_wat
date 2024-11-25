@@ -1256,7 +1256,7 @@
         global.get $canvas_width
         i32.const 2
         i32.div_s
-        local.get $width
+        i32.const 12
         i32.const 2
         i32.div_s
         i32.sub
@@ -1265,7 +1265,7 @@
         global.get $canvas_height
         i32.const 2
         i32.div_s
-        local.get $height
+        i32.const 12
         i32.const 2
         i32.div_s
         i32.sub
@@ -1276,8 +1276,7 @@
         local.get $height
         local.get $pointer
         i32.const 0
-        call $render_sprite_on_screen
-    )
+        call $render_sprite_on_screen)
 
     (func $render_background
         (local $ix i32)
