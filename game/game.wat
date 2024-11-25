@@ -1386,9 +1386,6 @@
     )
 
     (;SPRITES
-        test.sprt
-        2lines.sprt
-        smile.sprt
         brick_wall.sprt
         room_wall.sprt
         crosshair.sprt
