@@ -249,7 +249,7 @@
         
         local.tee $cell
         
-        i32.const 48 ;; 0
+        i32.const 48 ;; "0"
         i32.eq
         if
             call $get_sprite_brick_wall
@@ -259,7 +259,7 @@
         end
 
         local.get $cell
-        i32.const 49 ;; 1
+        i32.const 49 ;; "1"
         i32.eq
         if
             call $get_sprite_room_wall
@@ -276,8 +276,9 @@
         (local $y_wall_end i32)
         (local $shading f32)
         (local $angular_diameter f32)
-        (local $wall_percent_start f32)
+        (local $wall_percent_height f32)
         (local $wall_height i32)
+        (local $wall_padding i32)
         (local $s_width i32)
         (local $s_height i32)
         (local $s_pointer i32)
@@ -328,7 +329,6 @@
             local.set $shading
 
             ;; angular_diameter = 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
-
             global.get $map_wall_height_in_meters
             f32.const 2
             global.get $map_cell_size_in_meters
@@ -341,48 +341,52 @@
             f32.mul
             local.set $angular_diameter
 
-            f32.const 1
+            ;; wall_percent_height = angular_diameter / vertical_FOV
             local.get $angular_diameter
             global.get $vertical_FOV
             f32.div
-            f32.sub
-            local.tee $wall_percent_start
-            f32.const 0
-            f32.lt
-            if 
-                f32.const 0
-                local.set $wall_percent_start
-            end
+            local.set $wall_percent_height
 
+            ;; wall_height = canvas_height * wall_percent_height
             global.get $canvas_height
             f32.convert_i32_s
-            f32.const 2
-            f32.div
-            f32.floor
-            local.get $wall_percent_start
+            local.get $wall_percent_height
             f32.mul
             i32.trunc_f32_s
-            local.set $y_wall_start
+            local.set $wall_height
 
-
-            local.get $y_wall_start
-            i32.const 0
-            i32.lt_s
+            local.get $wall_height
+            global.get $canvas_height
+            i32.le_s
             if
+                global.get $canvas_height
+                local.get $wall_height
+                i32.sub
+                i32.const 2
+                i32.div_s
+                local.set $y_wall_start
+
+                global.get $canvas_height
+                local.get $y_wall_start
+                i32.sub
+                local.set $y_wall_end
+
+                local.get $y_wall_start
+                local.set $wall_padding
+            else
                 i32.const 0
                 local.set $y_wall_start
+
+                global.get $canvas_height
+                local.set $y_wall_end
+
+                local.get $wall_height
+                global.get $canvas_height
+                i32.sub
+                i32.const -2
+                i32.div_s
+                local.set $wall_padding
             end
-
-
-            global.get $canvas_height
-            local.get $y_wall_start
-            i32.sub
-            local.set $y_wall_end
-
-            local.get $y_wall_end
-            local.get $y_wall_start
-            i32.sub
-            local.set $wall_height
 
             local.get $y_wall_start
             local.set $iy
@@ -401,7 +405,7 @@
 
                     ;; y [0-1)
                     local.get $iy
-                    local.get $y_wall_start
+                    local.get $wall_padding
                     i32.sub
                     f32.convert_i32_s
                     local.get $wall_height
