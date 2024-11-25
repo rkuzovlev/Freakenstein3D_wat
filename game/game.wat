@@ -285,6 +285,7 @@
         (local $r i32)
         (local $g i32)
         (local $b i32)
+        (local $transparent i32)
         (local $wall_x i32)
         (local $intersection_fraction f32)
         (local $tsx f32)
@@ -418,17 +419,23 @@
                     i32.const 1 ;; walls palette
                     local.get $s_pointer
                     call $get_sprite_color
+                    local.set $transparent
                     local.set $b
                     local.set $g
                     local.set $r
 
-                    local.get $x
-                    local.get $iy
-                    local.get $r
-                    local.get $g
-                    local.get $b
-                    local.get $shading
-                    call $render_pixel
+                    local.get $transparent
+                    i32.const 0
+                    i32.eq
+                    if
+                        local.get $x
+                        local.get $iy
+                        local.get $r
+                        local.get $g
+                        local.get $b
+                        local.get $shading
+                        call $render_pixel
+                    end
 
                     ;; iy++
                     local.get $iy
@@ -1029,13 +1036,14 @@
     ;   $palette - palette number
     ;   $sprite_pointer 
     ;
-    ;   result r g b i32
+    ;   result r g b is_transparent i32
     ;)
-    (func $get_sprite_color (param $sw i32) (param $sh i32) (param $x f32) (param $y f32) (param $tsx f32) (param $tsy f32) (param $palette i32) (param $sprite_pointer i32) (result i32) (result i32) (result i32)
+    (func $get_sprite_color (param $sw i32) (param $sh i32) (param $x f32) (param $y f32) (param $tsx f32) (param $tsy f32) (param $palette i32) (param $sprite_pointer i32) (result i32) (result i32) (result i32) (result i32)
         (local $color_palette_index i32)
         (local $r i32)
         (local $g i32)
         (local $b i32)
+        (local $is_transparent i32)
         (local $tex_coord_x i32)
         (local $tex_coord_y i32)
         (local $color_index i32)
@@ -1114,11 +1122,18 @@
             i32.add
             i32.load8_u (memory $palettes)
             local.set $b
+
+            i32.const 0
+            local.set $is_transparent
+        else
+            i32.const 1
+            local.set $is_transparent
         end
-        
+
         local.get $r
         local.get $g
-        local.get $b)
+        local.get $b
+        local.get $is_transparent)
 
     (func $render_sprite_color (param $x i32) (param $y i32) (param $palette i32) (param $sprite_pointer i32) (param $color_index i32)
         (local $color_palette_index i32)
@@ -1195,6 +1210,7 @@
         (local $r i32)
         (local $g i32)
         (local $b i32)
+        (local $transparent i32)
         (local $iy i32)
         (local $ix i32)
         (local $width i32)
@@ -1249,17 +1265,23 @@
                         i32.const 0 ;; palette
                         local.get $pointer
                         call $get_sprite_color
+                        local.set $transparent
                         local.set $b
                         local.set $g
                         local.set $r
 
-                        local.get $ix
-                        local.get $iy
-                        local.get $r
-                        local.get $g
-                        local.get $b
-                        f32.const 1
-                        call $render_pixel
+                        local.get $transparent
+                        i32.const 0
+                        i32.eq
+                        if
+                            local.get $ix
+                            local.get $iy
+                            local.get $r
+                            local.get $g
+                            local.get $b
+                            f32.const 1
+                            call $render_pixel
+                        end
 
                         ;; ix++
                         local.get $ix
