@@ -28,7 +28,7 @@
     
     (global $player_x          (mut f32) (f32.const 5.5))
     (global $player_y          (mut f32) (f32.const 3.5))
-    (global $player_move_speed f32       (f32.const 1))
+    (global $player_move_speed f32       (f32.const 1.5))
     (global $player_angle_view (mut f32) (f32.const 0))
     
     (global $FOV                    f32       (f32.const 1.0))      ;; field of view between 0 and PI
@@ -73,9 +73,10 @@
         "0000000000000000000000000000000000000"
     )
 
-    (func $move_player_by_vector (param $dx f32) (param $dy f32)
+    (func $move_player_by_delta_xy (param $dx f32) (param $dy f32)
         (local $rotated_x f32)
         (local $rotated_y f32)
+        (local $rotated_length f32)
 
         ;; turn dx dy vector by angle
         ;; rotated_x = x * cos(angle) - y * sin(angle)
@@ -114,21 +115,48 @@
         f32.add
         local.set $rotated_y
 
-        global.get $player_x
+        ;; rotated_length = sqrt(rotated_x * rotated_x + rotated_y * rotated_y)
+        local.get $rotated_x
+        local.get $rotated_x
+        f32.mul
+        local.get $rotated_y
+        local.get $rotated_y
+        f32.mul
+        f32.add
+        f32.sqrt
+        local.set $rotated_length
+
+        local.get $rotated_length
+        f32.const 0
+        f32.ne
+        if
+            ;; vector normalization
+            local.get $rotated_x
+            local.get $rotated_length
+            f32.div
+            local.set $rotated_x
+
+            local.get $rotated_y
+            local.get $rotated_length
+            f32.div
+            local.set $rotated_y
+        end
+
         local.get $rotated_x
         global.get $delta_time
         f32.mul
         global.get $player_move_speed
         f32.mul
+        global.get $player_x
         f32.add
         global.set $player_x
         
-        global.get $player_y
         local.get $rotated_y
         global.get $delta_time
         f32.mul
         global.get $player_move_speed
         f32.mul
+        global.get $player_y
         f32.add
         global.set $player_y)
 
@@ -141,7 +169,7 @@
 
         local.get $dx
         local.get $dy
-        call $move_player_by_vector
+        call $move_player_by_delta_xy
         
         call $inc_frame_counter)
 
@@ -418,7 +446,7 @@
 
                     i32.const 1 ;; walls palette
                     local.get $s_pointer
-                    call $get_sprite_color
+                    call $get_sprite_pixel_color
                     local.set $transparent
                     local.set $b
                     local.set $g
@@ -693,7 +721,7 @@
         local.set $x
 
         local.get $x
-        f32.const 8388607 ;; magic number, max value of f32, pass checking if we exceed it
+        f32.const 9999999 ;; magic number, pass checking if we exceed it
         f32.lt
         if
         
@@ -733,7 +761,7 @@
         local.set $y
         
         local.get $y
-        f32.const 8388607  ;; magic number, max value of f32, pass checking if we exceed it
+        f32.const 9999999  ;; magic number, pass checking if we exceed it
         f32.lt
         if
         
@@ -1038,7 +1066,7 @@
     ;
     ;   result r g b is_transparent i32
     ;)
-    (func $get_sprite_color (param $sw i32) (param $sh i32) (param $x f32) (param $y f32) (param $tsx f32) (param $tsy f32) (param $palette i32) (param $sprite_pointer i32) (result i32) (result i32) (result i32) (result i32)
+    (func $get_sprite_pixel_color (param $sw i32) (param $sh i32) (param $x f32) (param $y f32) (param $tsx f32) (param $tsy f32) (param $palette i32) (param $sprite_pointer i32) (result i32) (result i32) (result i32) (result i32)
         (local $color_palette_index i32)
         (local $r i32)
         (local $g i32)
@@ -1203,7 +1231,7 @@
 
                         local.get $palette
                         local.get $s_pointer
-                        call $get_sprite_color
+                        call $get_sprite_pixel_color
                         local.set $transparent
                         local.set $b
                         local.set $g
