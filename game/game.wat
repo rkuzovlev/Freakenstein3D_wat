@@ -697,9 +697,7 @@
             end
         end)
 
-    (func $check_horizontal (param $y f32) (param $vx f32) (param $vy f32)
-        (local $x f32)
-        ;; need to calculate
+    (func $calculate_intersection_with_horizontal_line (param $y f32) (param $vx f32) (param $vy f32) (result f32)
         ;; x = ((y - player_y) * vx) / vy + player_x
 
         ;; y - player_y
@@ -717,14 +715,21 @@
 
         ;; + player_x
         global.get $player_x
-        f32.add
+        f32.add)
+
+    (func $check_horizontal (param $y f32) (param $vx f32) (param $vy f32)
+        (local $x f32)
+        
+        local.get $y
+        local.get $vx
+        local.get $vy
+        call $calculate_intersection_with_horizontal_line
         local.set $x
 
         local.get $x
         f32.const 9999999 ;; magic number, pass checking if we exceed it
         f32.lt
         if
-        
             local.get $x
             f32.const 0
             f32.gt
@@ -737,9 +742,7 @@
             end
         end)
 
-    (func $check_vertical (param $x f32) (param $vx f32) (param $vy f32)
-        (local $y f32)
-        ;; need to calculate
+    (func $calculate_intersection_with_vertical_line (param $x f32) (param $vx f32) (param $vy f32) (result f32)
         ;; y = ((x - player_x) * vy) / vx + player_y
 
         ;; x - player_x
@@ -757,14 +760,21 @@
 
         ;; + player_y
         global.get $player_y
-        f32.add
+        f32.add)
+
+    (func $check_vertical (param $x f32) (param $vx f32) (param $vy f32)
+        (local $y f32)
+        
+        local.get $x
+        local.get $vx
+        local.get $vy
+        call $calculate_intersection_with_vertical_line
         local.set $y
         
         local.get $y
         f32.const 9999999  ;; magic number, pass checking if we exceed it
         f32.lt
         if
-        
             local.get $y
             f32.const 0
             f32.gt
