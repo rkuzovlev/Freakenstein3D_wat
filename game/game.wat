@@ -26,10 +26,11 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x          (mut f32) (f32.const 5.5))
-    (global $player_y          (mut f32) (f32.const 3.5))
-    (global $player_move_speed f32       (f32.const 1.5))
-    (global $player_angle_view (mut f32) (f32.const 0))
+    (global $player_x                           (mut f32) (f32.const 5.5))
+    (global $player_y                           (mut f32) (f32.const 3.5))
+    (global $player_move_speed                  f32       (f32.const 1.5))
+    (global $player_angle_view                  (mut f32) (f32.const 0))
+    (global $player_check_collision_distance    f32       (f32.const 0.35))
     
     (global $FOV                    f32       (f32.const 1.0))      ;; field of view between 0 and PI
     (global $FOV_angle_step         (mut f32) (f32.const 0.1))      ;; default step, need to initialize in $init function
@@ -59,9 +60,9 @@
         "1111000000000000000000000000000000000"
         "1..10.........0.....0.....0.....0...0"
         "1...........0.0.....0.....0.....0...0"
-        "1..10.......0.000.00000.00000.0000.00"
+        "1..10.....000.000.00000.00000.0000.00"
         "01110.......0.......................0"
-        "00000.......0.00000.0000000000.000000"
+        "00000.....000.00000.0000000000.000000"
         "0...........0.0.........0...........0"
         "0...........0.0.........0...........0"
         "000000000000000000000000000000.000000"
@@ -72,6 +73,221 @@
         "0...................................0"
         "0000000000000000000000000000000000000"
     )
+
+    (func $is_wall_by_x_y (param $x i32) (param $y i32) (result i32)
+        (local $cell i32)
+
+        local.get $x
+        i32.const 0
+        i32.lt_s
+        if
+            i32.const 0
+            return
+        end
+        
+        local.get $y
+        i32.const 0
+        i32.lt_s
+        if
+            i32.const 0
+            return
+        end
+
+        local.get $x
+        local.get $y
+        call $map_get_cell
+        
+        local.tee $cell
+        
+        i32.const 48 ;; "0"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 49 ;; "1"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        i32.const 0)
+
+    (func $vector_normalize (param $x f32) (param $y f32) (result f32) (result f32)
+        (local $length f32)
+        (local $nx f32)
+        (local $ny f32)
+
+        local.get $x
+        local.set $nx
+
+        local.get $y
+        local.set $ny
+
+        local.get $x
+        local.get $y
+        call $vector_distance
+        local.tee $length
+        f32.const 0
+        f32.ne
+        if
+            ;; vector normalization
+            local.get $x
+            local.get $length
+            f32.div
+            local.set $nx
+
+            local.get $y
+            local.get $length
+            f32.div
+            local.set $ny
+        end
+        
+        local.get $x
+        local.get $y)
+
+    ;; distance = sqrt(x * x + y * y)
+    (func $vector_distance (param $x f32) (param $y f32) (result f32)
+        local.get $x
+        local.get $x
+        f32.mul
+        local.get $y
+        local.get $y
+        f32.mul
+        f32.add
+        f32.sqrt)
+
+    (func $line_segment_distance (param $from_x f32) (param $from_y f32) (param $to_x f32) (param $to_y f32) (result f32)
+        (local $x f32)
+        (local $y f32)
+
+        local.get $to_x
+        local.get $from_x
+        f32.sub
+        local.set $x
+
+        local.get $to_y
+        local.get $from_y
+        f32.sub
+        local.set $y
+
+        local.get $x
+        local.get $y
+        call $vector_distance)
+
+    (func $is_player_collide_with_wall (param $wall_intersect_x f32) (param $wall_intersect_y f32) (result i32)
+        local.get $wall_intersect_x
+        i32.trunc_f32_s
+        local.get $wall_intersect_y
+        i32.trunc_f32_s
+        call $is_wall_by_x_y
+        i32.const 0
+        i32.eq
+        if
+            i32.const 0
+            return
+        end
+
+        global.get $player_x
+        global.get $player_y
+        local.get $wall_intersect_x
+        local.get $wall_intersect_y
+        call $line_segment_distance
+        global.get $player_check_collision_distance
+        f32.gt
+        if
+            i32.const 0
+            return
+        end
+
+        i32.const 1)
+
+    ;; check intersection with closest walls by move vector
+    (func $check_player_wall_collisions (param $move_x f32) (param $move_y f32) (result f32) (result f32)
+        (local $x f32)
+        (local $y f32)
+        (local $new_move_x f32)
+        (local $new_move_y f32)
+
+        local.get $move_x
+        local.set $new_move_x
+
+        local.get $move_y
+        local.set $new_move_y
+
+        local.get $move_x
+        f32.const 0
+        f32.gt
+        if  ;; we moving right
+            global.get $player_x
+            f32.ceil
+            global.get $player_y
+            call $is_player_collide_with_wall
+            i32.const 1
+            i32.eq
+            if
+                f32.const 0
+                local.set $new_move_x
+            end
+        end
+
+        local.get $move_x
+        f32.const 0
+        f32.lt
+        if  ;; we moving left
+            global.get $player_x
+            f32.floor
+            f32.const 0.000001
+            f32.sub
+            global.get $player_y
+            call $is_player_collide_with_wall
+            i32.const 1
+            i32.eq
+            if
+                f32.const 0
+                local.set $new_move_x
+            end
+        end
+
+        local.get $move_y
+        f32.const 0
+        f32.gt
+        if  ;; we moving bottom
+            global.get $player_x
+            global.get $player_y
+            f32.ceil
+            call $is_player_collide_with_wall
+            i32.const 1
+            i32.eq
+            if
+                f32.const 0
+                local.set $new_move_y
+            end
+        end
+
+        local.get $move_y
+        f32.const 0
+        f32.lt
+        if  ;; we moving top
+            global.get $player_x
+            global.get $player_y
+            f32.floor
+            f32.const 0.000001
+            f32.sub
+            call $is_player_collide_with_wall
+            i32.const 1
+            i32.eq
+            if
+                f32.const 0
+                local.set $new_move_y
+            end
+        end
+        
+        local.get $new_move_x
+        local.get $new_move_y)
 
     (func $move_player_by_delta_xy (param $dx f32) (param $dy f32)
         (local $rotated_x f32)
@@ -115,32 +331,17 @@
         f32.add
         local.set $rotated_y
 
-        ;; rotated_length = sqrt(rotated_x * rotated_x + rotated_y * rotated_y)
         local.get $rotated_x
+        local.get $rotated_y
+        call $vector_normalize
+        local.set $rotated_y
+        local.set $rotated_x
+
         local.get $rotated_x
-        f32.mul
         local.get $rotated_y
-        local.get $rotated_y
-        f32.mul
-        f32.add
-        f32.sqrt
-        local.set $rotated_length
-
-        local.get $rotated_length
-        f32.const 0
-        f32.ne
-        if
-            ;; vector normalization
-            local.get $rotated_x
-            local.get $rotated_length
-            f32.div
-            local.set $rotated_x
-
-            local.get $rotated_y
-            local.get $rotated_length
-            f32.div
-            local.set $rotated_y
-        end
+        call $check_player_wall_collisions
+        local.set $rotated_y
+        local.set $rotated_x
 
         local.get $rotated_x
         global.get $delta_time
