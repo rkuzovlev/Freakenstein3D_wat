@@ -48,6 +48,8 @@
     (global $intersection_cell_y                    (mut i32) (i32.const 0))
     (global $intersection_is_found                  (mut i32) (i32.const 0))
     (global $intersection_map_max_distance_in_lines i32       (i32.const 8))
+    
+    (global $have_keys i32 (i32.const 0xf)) ;; 0b0001 - green key; 0b0010 - blue key; 0b0100 - red key; 0b1000 - yellow key
 
     (memory $frame 30)
     (memory $common 1)
@@ -55,17 +57,21 @@
     (;
         0 - brick wall
         1 - room wall
+        G - green door
+        B - blue door
+        R - red door
+        Y - yellow door
     ;)
     (data (memory $map) (i32.const 0)  
         "1111000000000000000000000000000000000"
         "1..10.........0.....0.....0.....0...0"
-        "1...........0.0.....0.....0.....0...0"
-        "1..10.....000.000.00000.00000.0000.00"
-        "01110.......0.......................0"
-        "00000.....000.00000.0000000000.000000"
-        "0...........0.0.........0...........0"
-        "0...........0.0.........0...........0"
-        "000000000000000000000000000000.000000"
+        "1.............0.....0.....0.....0...0"
+        "1..10.........000.00000.00000.0000.00"
+        "01110...............................0"
+        "00000.........00000.0000000000.000000"
+        "0.............0.........0...........0"
+        "0.............0.........0...........0"
+        "000.0G0B0R0Y0.0000000000000000.000000"
         "0...................................0"
         "0...................................0"
         "0...................................0"
@@ -108,6 +114,38 @@
 
         local.get $cell
         i32.const 49 ;; "1"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 71 ;; "G"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 82 ;; "R"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 66 ;; "B"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 89 ;; "Y"
         i32.eq
         if
             i32.const 1
@@ -469,7 +507,7 @@
         local.get $value
         i32.store (memory $frame))
 
-    (func $get_wall_sprite_based_on_map_cell (param $x i32) (param $y i32) (result (; width ;) i32) (result (; height ;) i32) (result (; sprite pointer ;) i32) (result (; tsx ;) f32) (result (; tsy ;) f32)
+    (func $get_wall_sprite_based_on_map_cell (param $x i32) (param $y i32) (result (; width ;) i32) (result (; height ;) i32) (result (; sprite pointer ;) i32) (result (; palette ;) i32) (result (; tsx ;) f32) (result (; tsy ;) f32)
         (local $cell i32)
 
         local.get $x
@@ -482,6 +520,7 @@
         i32.eq
         if
             call $get_sprite_brick_wall
+            i32.const 1
             f32.const 0.1
             f32.const 0.1
             return
@@ -492,6 +531,51 @@
         i32.eq
         if
             call $get_sprite_room_wall
+            i32.const 1
+            f32.const 1
+            f32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 71 ;; "G"
+        i32.eq
+        if
+            call $get_sprite_door
+            i32.const 2
+            f32.const 1
+            f32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 82 ;; "R"
+        i32.eq
+        if
+            call $get_sprite_door
+            i32.const 3
+            f32.const 1
+            f32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 66 ;; "B"
+        i32.eq
+        if
+            call $get_sprite_door
+            i32.const 4
+            f32.const 1
+            f32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 89 ;; "Y"
+        i32.eq
+        if
+            call $get_sprite_door
+            i32.const 5
             f32.const 1
             f32.const 1
             return
@@ -511,6 +595,7 @@
         (local $s_width i32)
         (local $s_height i32)
         (local $s_pointer i32)
+        (local $s_palette i32)
         (local $r i32)
         (local $g i32)
         (local $b i32)
@@ -542,6 +627,7 @@
             call $get_wall_sprite_based_on_map_cell
             local.set $tsy
             local.set $tsx
+            local.set $s_palette
             local.set $s_pointer
             local.set $s_height
             local.set $s_width
@@ -645,7 +731,7 @@
                     local.get $tsx
                     local.get $tsy
 
-                    i32.const 1 ;; walls palette
+                    local.get $s_palette
                     local.get $s_pointer
                     call $get_sprite_pixel_color
                     local.set $transparent
@@ -694,7 +780,9 @@
             local.set $r
         end
 
-        local.get $r)
+        f32.const 1
+        local.get $r
+        f32.sub)
 
     (func $check_intersection (param $x f32) (param $y f32) (param $vx f32) (param $vy f32)
         (local $dvx f32)
@@ -861,6 +949,38 @@
 
                 local.get $cell
                 i32.const 49 ;; 1
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 71 ;; "G"
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 82 ;; "R"
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 66 ;; "B"
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 89 ;; "Y"
                 i32.eq
                 if
                     i32.const 1
@@ -1190,8 +1310,7 @@
     (func $render
         call $render_background
         call $render_columns
-        ;;call $render_crosshair
-    )
+        call $render_keys)
 
     (func $render_columns
         (local $ix i32)
@@ -1517,6 +1636,108 @@
         i32.const 0
         call $render_sprite_on_screen)
 
+    (func $have_key_by_color_number (param $num i32) (result i32)
+        global.get $have_keys
+        local.get $num
+        i32.and
+        local.get $num
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+        
+        i32.const 0)
+
+    (func $have_green_key (result i32)
+        i32.const 1 ;; 0b1
+        call $have_key_by_color_number)
+
+    (func $have_blue_key (result i32)
+        i32.const 2 ;; 0b10
+        call $have_key_by_color_number)
+
+    (func $have_red_key (result i32)
+        i32.const 4 ;; 0b100
+        call $have_key_by_color_number)
+
+    (func $have_yellow_key (result i32)
+        i32.const 8 ;; 0b1000
+        call $have_key_by_color_number)
+
+    (func $render_keys
+        call $have_green_key
+        i32.const 1
+        i32.eq
+        if
+            i32.const 0
+            i32.const 2
+            call $render_key
+        end
+
+        call $have_blue_key
+        i32.const 1
+        i32.eq
+        if
+            i32.const 1
+            i32.const 3
+            call $render_key
+        end
+
+        call $have_red_key
+        i32.const 1
+        i32.eq
+        if
+            i32.const 2
+            i32.const 4
+            call $render_key
+        end
+
+        call $have_yellow_key
+        i32.const 1
+        i32.eq
+        if
+            i32.const 3
+            i32.const 5
+            call $render_key
+        end)
+
+    (func $render_key (param $offset i32)  (param $palette i32)
+        (local $width i32)
+        (local $height i32)
+        (local $pointer i32)
+    
+        call $get_sprite_key
+        local.set $pointer
+        local.set $height
+        local.set $width
+        
+        ;; x
+        global.get $canvas_width
+        i32.const 28 ;; render width
+        i32.const 20
+        i32.add
+        local.get $offset
+        i32.const 1
+        i32.add
+        i32.mul
+        i32.sub
+        
+        ;; y
+        global.get $canvas_height
+        i32.const 20
+        i32.sub
+        i32.const 38 ;; render height
+        i32.sub
+        
+        i32.const 28
+        i32.const 38
+        local.get $width
+        local.get $height
+        local.get $pointer
+        local.get $palette
+        call $render_sprite_on_screen)
+
     (func $render_background
         (local $ix i32)
         (local $iy i32)
@@ -1619,13 +1840,19 @@
 
     (memory $palettes 1)
     (data (memory $palettes) (i32.const 0)  
-        (; default palette 0 ;) "\ff\ff\ff\d3\d3\d3\78\78\78\9f\59\2d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
-        (; walls palette 1 ;) "\78\78\78\9f\59\2d\25\5c\14\cd\c7\1d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; default palette 0 ;)     "\ff\ff\ff\d3\d3\d3\78\78\78\9f\59\2d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; walls palette 1 ;)       "\78\78\78\9f\59\2d\25\5c\14\cd\c7\1d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; green wall and key 2 ;)  "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\32\93\2f\25\5c\14\00\ff\11\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; blue wall and key 3 ;)   "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\30\2f\93\14\19\5c\00\11\ff\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; red wall and key 4 ;)    "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\93\2f\2f\5c\14\14\ff\00\00\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; yellow wall and key 5 ;) "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\ab\a0\26\5a\5b\10\ff\f7\00\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
     )
 
     (;SPRITES
         brick_wall.sprt
         room_wall.sprt
         crosshair.sprt
+        door.sprt
+        key.sprt
     ;)
 )

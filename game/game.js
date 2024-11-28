@@ -50,8 +50,26 @@ async function gameInit(wasmData) {
     const MAP_MAX_LINES_INTERSECT_FIND = intersection_map_max_distance_in_lines.value
     const BRICK_WALL_CHAR_CODE = "0".charCodeAt(0)
     const ROOM_WALL_CHAR_CODE = "1".charCodeAt(0)
+    const GREEN_DOOR_CHAR_CODE = "G".charCodeAt(0)
+    const RED_DOOR_CHAR_CODE = "R".charCodeAt(0)
+    const BLUE_DOOR_CHAR_CODE = "B".charCodeAt(0)
+    const YELLOW_DOOR_CHAR_CODE = "Y".charCodeAt(0)
     const FLOOR_CHAR_CODE = ".".charCodeAt(0)
-    const WALLS = [BRICK_WALL_CHAR_CODE, ROOM_WALL_CHAR_CODE]
+    const WALLS = [
+        BRICK_WALL_CHAR_CODE, 
+        ROOM_WALL_CHAR_CODE,
+        GREEN_DOOR_CHAR_CODE,
+        RED_DOOR_CHAR_CODE,
+        BLUE_DOOR_CHAR_CODE,
+        YELLOW_DOOR_CHAR_CODE,
+    ]
+
+    function drawWallCell(x, y, text){
+        gameContext.fill()
+        gameContext.fillStyle = "#000000"
+        gameContext.fillText(text, x + 0.35 * MAP_DRAW_MULTILPLIER , y + 0.65 * MAP_DRAW_MULTILPLIER)
+        gameContext.stroke()
+    }
 
     function drawCell(cellX, cellY, type){
         const x = cellX * MAP_DRAW_MULTILPLIER + MAP_PADDING
@@ -62,21 +80,12 @@ async function gameInit(wasmData) {
         gameContext.beginPath()
         gameContext.rect(x, y, MAP_DRAW_MULTILPLIER, MAP_DRAW_MULTILPLIER)
         switch (type) {
-            case BRICK_WALL_CHAR_CODE: {
-                gameContext.fill()
-                gameContext.fillStyle = "#000000"
-                gameContext.fillText('0', x + 0.35 * MAP_DRAW_MULTILPLIER , y + 0.65 * MAP_DRAW_MULTILPLIER)
-                gameContext.stroke()
-                break
-            }
-
-            case ROOM_WALL_CHAR_CODE: {
-                gameContext.fill()
-                gameContext.fillStyle = "#000000"
-                gameContext.fillText('1', x + 0.35 * MAP_DRAW_MULTILPLIER , y + 0.65 * MAP_DRAW_MULTILPLIER)
-                gameContext.stroke()
-                break
-            }
+            case GREEN_DOOR_CHAR_CODE: drawWallCell(x, y, "G"); break
+            case RED_DOOR_CHAR_CODE: drawWallCell(x, y, "R"); break
+            case BLUE_DOOR_CHAR_CODE: drawWallCell(x, y, "B"); break
+            case YELLOW_DOOR_CHAR_CODE: drawWallCell(x, y, "Y"); break
+            case ROOM_WALL_CHAR_CODE: drawWallCell(x, y, "1"); break
+            case BRICK_WALL_CHAR_CODE: drawWallCell(x, y, "0"); break
 
             case FLOOR_CHAR_CODE: {
                 gameContext.stroke()
