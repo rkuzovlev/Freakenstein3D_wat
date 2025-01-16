@@ -71,8 +71,8 @@
         0 (48)  - brick wall
         1 (49)  - room wall
         G (71)  - green door
-        B (82)  - blue door
-        R (66)  - red door
+        B (66)  - blue door
+        R (82)  - red door
         Y (89)  - yellow door
         g (103) - green key
         b (98) - blue key
@@ -427,7 +427,137 @@
         call $move_player_by_delta_xy
         
         call $check_objects_intersection
+        call $check_player_can_open_door
         call $inc_frame_counter)
+
+    (func $check_player_can_open_door_in_cell (param $x f32) (param $y f32)
+        (local $cell i32)
+        (local $lx i32)
+        (local $ly i32)
+
+        local.get $x
+        i32.trunc_f32_s
+        local.set $lx
+        
+        local.get $y
+        i32.trunc_f32_s
+        local.set $ly
+
+
+        local.get $lx
+        local.get $ly
+        call $map_get_cell
+        local.set $cell
+
+        local.get $cell
+        i32.const 71 ;; "G"
+        i32.eq
+        if
+            call $have_green_key
+            i32.const 1
+            i32.eq
+            if
+                ;; clear map cell, set floor tile "."
+                local.get $lx
+                local.get $ly
+                i32.const 46 ;; .
+                call $map_set_cell
+                
+                call $remove_green_key
+            end
+            return
+        end
+
+        local.get $cell
+        i32.const 66 ;; "B"
+        i32.eq
+        if
+            call $have_blue_key
+            i32.const 1
+            i32.eq
+            if
+                ;; clear map cell, set floor tile "."
+                local.get $lx
+                local.get $ly
+                i32.const 46 ;; .
+                call $map_set_cell
+                
+                call $remove_blue_key
+            end
+            return
+        end
+
+        local.get $cell
+        i32.const 82 ;; "R"
+        i32.eq
+        if
+            call $have_red_key
+            i32.const 1
+            i32.eq
+            if
+                ;; clear map cell, set floor tile "."
+                local.get $lx
+                local.get $ly
+                i32.const 46 ;; .
+                call $map_set_cell
+                
+                call $remove_red_key
+            end
+            return
+        end
+
+        local.get $cell
+        i32.const 89 ;; "Y"
+        i32.eq
+        if
+            call $have_yellow_key
+            i32.const 1
+            i32.eq
+            if
+                ;; clear map cell, set floor tile "."
+                local.get $lx
+                local.get $ly
+                i32.const 46 ;; .
+                call $map_set_cell
+                
+                call $remove_yellow_key
+            end
+            return
+        end)
+
+    (func $check_player_can_open_door
+        ;; проверим ячейку где стоит игрок
+        global.get $player_x
+        global.get $player_y
+        call $check_player_can_open_door_in_cell
+
+        ;; проверим ячейку выше игрока
+        global.get $player_x
+        global.get $player_y
+        f32.const 1
+        f32.sub
+        call $check_player_can_open_door_in_cell
+
+        ;; проверим ячейку ниже игрока
+        global.get $player_x
+        global.get $player_y
+        f32.const 1
+        f32.add
+        call $check_player_can_open_door_in_cell
+
+        ;; проверим ячейку слева от игрока
+        global.get $player_x
+        f32.const 1
+        f32.sub
+        global.get $player_y
+        call $check_player_can_open_door_in_cell
+
+        ;; проверим ячейку справа от игрока
+        global.get $player_x
+        f32.const 1
+        f32.add
+        global.get $player_y
+        call $check_player_can_open_door_in_cell)
 
     (func $remove_object_by_index (param $index i32)
         (local $i i32)
@@ -2801,6 +2931,7 @@
         i32.const 0
         call $render_sprite_on_screen)
 
+    
     (func $have_key_by_color_number (param $num i32) (result i32)
         global.get $have_keys
         local.get $num
@@ -2830,6 +2961,7 @@
         i32.const 8 ;; 0b1000
         call $have_key_by_color_number)
 
+
     (func $collect_key_by_color_number (param $num i32)
         global.get $have_keys
         local.get $num
@@ -2851,6 +2983,36 @@
     (func $collect_yellow_key
         i32.const 8 ;; 0b1000
         call $collect_key_by_color_number)
+
+
+    (func $remove_key_by_color_number (param $num i32)
+        global.get $have_keys
+        local.get $num
+        i32.and
+        local.get $num
+        i32.eq
+        if
+            global.get $have_keys
+            local.get $num
+            i32.sub
+            global.set $have_keys
+        end)
+
+    (func $remove_green_key
+        i32.const 1 ;; 0b1
+        call $remove_key_by_color_number)
+
+    (func $remove_blue_key
+        i32.const 2 ;; 0b10
+        call $remove_key_by_color_number)
+
+    (func $remove_red_key
+        i32.const 4 ;; 0b100
+        call $remove_key_by_color_number)
+
+    (func $remove_yellow_key
+        i32.const 8 ;; 0b1000
+        call $remove_key_by_color_number)
 
 
     (func $render_keys
