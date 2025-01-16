@@ -54,7 +54,7 @@
     (global $intersection_is_found                  (mut i32) (i32.const 0))
     (global $intersection_map_max_distance_in_lines i32       (i32.const 8))
     
-    (global $have_keys i32 (i32.const 0xf)) ;; 0b0001 - green key; 0b0010 - blue key; 0b0100 - red key; 0b1000 - yellow key
+    (global $have_keys (mut i32) (i32.const 0)) ;; 0b0001 - green key; 0b0010 - blue key; 0b0100 - red key; 0b1000 - yellow key
     
     (global $objects_intersected_count (mut i32) (i32.const 0)) 
     ;; intersection_object = { type: i32, distance_to_player: f32, intersection_fraction: f32 }
@@ -75,19 +75,19 @@
         R (66)  - red door
         Y (89)  - yellow door
         g (103) - green key
-        b (114) - blue key
-        r (98)  - red key
+        b (98) - blue key
+        r (114)  - red key
         y (121) - yellow key
     ;)
     (data (memory $map) (i32.const 0)  
         "1111000000000000000000000000000000000"
-        "1..10......g..0.....0.....0.....0...0"
-        "1.............0.....0.....0.....0...0"
-        "1..10......r..000.00000.00000.0000.00"
+        "1..10...r.g.b.y.....0.....0.....0...0"
+        "1...................0.....0.....0...0"
+        "1..10...............000.00000.0000.00"
         "01110...............................0"
-        "00000......b..00000.0000000000.000000"
+        "00000.........00000.0000000000.000000"
         "0.............0.........0...........0"
-        "0..........y..0.........0...........0"
+        "0.............0.........0...........0"
         "000.0G0B0R0Y0.0000000000000000.000000"
         "0...................................0"
         "0...................................0"
@@ -426,9 +426,152 @@
         local.get $dy
         call $move_player_by_delta_xy
         
+        call $check_objects_intersection
         call $inc_frame_counter)
+
+    (func $remove_object_by_index (param $index i32)
+        (local $i i32)
+        (local $x f32)
+        (local $y f32)
+        (local $type i32)
+        
+        local.get $index
+        i32.const 1
+        i32.add
+        local.set $i
+
+        loop $loop
+            local.get $i
+            global.get $objects_count
+            i32.ge_s
+            if
+                global.get $objects_count
+                i32.const 1
+                i32.sub
+                global.set $objects_count
+
+                return
+            end
+
+            ;; двойной $i один для get другой для set
+            local.get $i
+            i32.const 1
+            i32.sub
+            local.get $i
+            call $get_object_by_index
+            call $set_object_by_index
+
+            ;; i++
+            local.get $i
+            i32.const 1
+            i32.add
+            local.set $i
+
+            br $loop
+        end
+        
+        unreachable)
     
-    (func $get_object_by_index (param $index i32) (result i32) (result f32) (result f32)
+    (func $object_intersected (param $index i32)
+        (local $x f32)
+        (local $y f32)
+        (local $type i32)
+
+        local.get $index
+        call $get_object_by_index
+        local.set $type
+        local.set $y
+        local.set $x
+
+        local.get $type
+        i32.const 103 ;; "g"
+        i32.eq
+        if
+            call $collect_green_key
+            local.get $index
+            call $remove_object_by_index
+            return
+        end
+
+        local.get $type
+        i32.const 114 ;; "r"
+        i32.eq
+        if
+            call $collect_red_key
+            local.get $index
+            call $remove_object_by_index
+            return
+        end
+
+        local.get $type
+        i32.const 98 ;; "b"
+        i32.eq
+        if
+            call $collect_blue_key
+            local.get $index
+            call $remove_object_by_index
+            return
+        end
+
+        local.get $type
+        i32.const 121 ;; "y"
+        i32.eq
+        if
+            call $collect_yellow_key
+            local.get $index
+            call $remove_object_by_index
+            return
+        end)
+
+    (func $check_objects_intersection
+        (local $i i32)
+        (local $x f32)
+        (local $y f32)
+        (local $distance f32)
+
+        i32.const 0
+        local.set $i
+        loop $loop
+            local.get $i
+            global.get $objects_count
+            i32.ge_s
+            if
+                return
+            end
+            
+            local.get $i
+            call $get_object_by_index
+            drop
+            local.set $y
+            local.set $x
+
+            local.get $x
+            local.get $y
+            global.get $player_x
+            global.get $player_y
+            call $line_segment_distance
+            local.set $distance
+
+            local.get $distance
+            f32.const 0.5
+            f32.le
+            if  ;; есть пересечение с объектом
+                local.get $i
+                call $object_intersected
+            end
+
+            ;; i++
+            local.get $i
+            i32.const 1
+            i32.add
+            local.set $i
+
+            br $loop
+        end
+
+        unreachable)
+
+    (func $get_object_by_index (param $index i32) (result (; x ;) f32) (result (; y ;) f32) (result (; type ;) i32)
         (local $position i32)
         (local $type i32)
         (local $x f32)
@@ -464,21 +607,21 @@
         f32.load (memory $objects)
         local.set $y
         
-        local.get $type
         local.get $x
-        local.get $y)
+        local.get $y
+        local.get $type)
 
-    (func $init_object (param $x i32) (param $y i32) (param $object i32)
+    (func $set_object_by_index (param $index i32) (param $x f32) (param $y f32) (param $type i32)
         (local $position i32)
 
-        global.get $objects_count
+        local.get $index
         i32.const 12 ;; object size in bytes
         i32.mul
         local.set $position
 
         ;; store object type
         local.get $position
-        local.get $object
+        local.get $type
         i32.store (memory $objects)
         
         local.get $position
@@ -486,12 +629,9 @@
         i32.add
         local.set $position
 
-        ;; store x + 0.5
+        ;; store x
         local.get $position
         local.get $x
-        f32.convert_i32_s
-        f32.const 0.5
-        f32.add
         f32.store (memory $objects)
 
         local.get $position
@@ -499,13 +639,33 @@
         i32.add
         local.set $position
 
-        ;; store y + 0.5
+        ;; store y
         local.get $position
+        local.get $y
+        f32.store (memory $objects))
+
+    (func $init_object (param $x i32) (param $y i32) (param $type i32)
+        (local $position i32)
+
+        ;; index
+        global.get $objects_count
+        
+        ;; x
+        local.get $x
+        f32.convert_i32_s
+        f32.const 0.5
+        f32.add
+
+        ;; y
         local.get $y
         f32.convert_i32_s
         f32.const 0.5
         f32.add
-        f32.store (memory $objects)
+
+        ;; type
+        local.get $type
+
+        call $set_object_by_index
         
         global.get $objects_count
         i32.const 1
@@ -518,8 +678,8 @@
         i32.const 46 ;; .
         call $map_set_cell)
 
-    (func $init_cell_object (param $x i32) (param $y i32) (param $cell_object i32)
-        local.get $cell_object
+    (func $init_cell_object (param $x i32) (param $y i32) (param $type i32)
+        local.get $type
         i32.const 103 ;; "g"
         i32.eq
         if
@@ -530,7 +690,7 @@
             return
         end
 
-        local.get $cell_object
+        local.get $type
         i32.const 114 ;; "r"
         i32.eq
         if
@@ -541,7 +701,7 @@
             return
         end
 
-        local.get $cell_object
+        local.get $type
         i32.const 98 ;; "b"
         i32.eq
         if
@@ -552,7 +712,7 @@
             return
         end
 
-        local.get $cell_object
+        local.get $type
         i32.const 121 ;; "y"
         i32.eq
         if
@@ -1359,20 +1519,20 @@
         end
 
         local.get $type
-        i32.const 114 ;; "b"
-        i32.eq
-        if
-            call $get_sprite_key
-            i32.const 3
-            return
-        end
-
-        local.get $type
-        i32.const 98 ;; "r"
+        i32.const 114 ;; "r"
         i32.eq
         if
             call $get_sprite_key
             i32.const 4
+            return
+        end
+
+        local.get $type
+        i32.const 98 ;; "b"
+        i32.eq
+        if
+            call $get_sprite_key
+            i32.const 3
             return
         end
 
@@ -1604,9 +1764,9 @@
 
         local.get $object_index
         call $get_object_by_index
+        local.set $type
         local.set $oy
         local.set $ox
-        local.set $type
 
         local.get $type
         call $get_object_sprite_by_type
@@ -2670,41 +2830,89 @@
         i32.const 8 ;; 0b1000
         call $have_key_by_color_number)
 
+    (func $collect_key_by_color_number (param $num i32)
+        global.get $have_keys
+        local.get $num
+        i32.or
+        global.set $have_keys)
+
+    (func $collect_green_key
+        i32.const 1 ;; 0b1
+        call $collect_key_by_color_number)
+
+    (func $collect_blue_key
+        i32.const 2 ;; 0b10
+        call $collect_key_by_color_number)
+
+    (func $collect_red_key
+        i32.const 4 ;; 0b100
+        call $collect_key_by_color_number)
+
+    (func $collect_yellow_key
+        i32.const 8 ;; 0b1000
+        call $collect_key_by_color_number)
+
+
     (func $render_keys
+        (local $offset i32)
+
+        i32.const 0
+        local.set $offset
+
         call $have_green_key
         i32.const 1
         i32.eq
         if
-            i32.const 0
+            local.get $offset
             i32.const 2
             call $render_key
+
+            local.get $offset
+            i32.const 1
+            i32.add
+            local.set $offset
         end
 
         call $have_blue_key
         i32.const 1
         i32.eq
         if
-            i32.const 1
+            local.get $offset
             i32.const 3
             call $render_key
+
+            local.get $offset
+            i32.const 1
+            i32.add
+            local.set $offset
         end
 
         call $have_red_key
         i32.const 1
         i32.eq
         if
-            i32.const 2
+            local.get $offset
             i32.const 4
             call $render_key
+
+            local.get $offset
+            i32.const 1
+            i32.add
+            local.set $offset
         end
 
         call $have_yellow_key
         i32.const 1
         i32.eq
         if
-            i32.const 3
+            local.get $offset
             i32.const 5
             call $render_key
+
+            local.get $offset
+            i32.const 1
+            i32.add
+            local.set $offset
         end)
 
     (func $render_key (param $offset i32)  (param $palette i32)
