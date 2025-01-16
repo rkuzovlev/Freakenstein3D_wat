@@ -5,6 +5,8 @@
     
     (export "frame" (memory $frame))
     (export "map" (memory $map))
+    (export "objects_intersected" (memory $objects_intersected))
+    (export "objects" (memory $objects))
     
     (export "player_x" (global $player_x))
     (export "player_y" (global $player_y))
@@ -16,6 +18,9 @@
     (import "Math" "sin" (func $sin (param f32) (result f32)))
     (import "Math" "cos" (func $cos (param f32) (result f32)))
     (import "Math" "atan" (func $atan (param f32) (result f32)))
+    (import "Math" "acos" (func $acos (param f32) (result f32)))
+    (import "Math" "tan" (func $tan (param f32) (result f32)))
+    (import "Math" "PI" (global $PI f32))
     (import "common" "log" (func $log (param f32)))
     (import "common" "log" (func $logi (param i32)))
     (import "common" "onIntersectionFound" (func $on_intersection_found (param f32) (param f32)))
@@ -26,8 +31,8 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x                           (mut f32) (f32.const 5.5))
-    (global $player_y                           (mut f32) (f32.const 3.5))
+    (global $player_x                           (mut f32) (f32.const 10.5))
+    (global $player_y                           (mut f32) (f32.const 2.5))
     (global $player_move_speed                  f32       (f32.const 1.5))
     (global $player_angle_view                  (mut f32) (f32.const 0))
     (global $player_check_collision_distance    f32       (f32.const 0.35))
@@ -50,27 +55,39 @@
     (global $intersection_map_max_distance_in_lines i32       (i32.const 8))
     
     (global $have_keys i32 (i32.const 0xf)) ;; 0b0001 - green key; 0b0010 - blue key; 0b0100 - red key; 0b1000 - yellow key
+    
+    (global $objects_intersected_count (mut i32) (i32.const 0)) 
+    ;; intersection_object = { type: i32, distance_to_player: f32, intersection_fraction: f32 }
+    (memory $objects_intersected 1) ;; [ intersection_object ]
+    
+    (global $objects_count (mut i32) (i32.const 0)) 
+    ;; object = { type: i32, x: f32, y: f32 }
+    ;; objects = [ object ]
+    (memory $objects 1)
 
     (memory $frame 30)
-    (memory $common 1)
     (memory $map 1)
     (;
-        0 - brick wall
-        1 - room wall
-        G - green door
-        B - blue door
-        R - red door
-        Y - yellow door
+        0 (48)  - brick wall
+        1 (49)  - room wall
+        G (71)  - green door
+        B (82)  - blue door
+        R (66)  - red door
+        Y (89)  - yellow door
+        g (103) - green key
+        b (114) - blue key
+        r (98)  - red key
+        y (121) - yellow key
     ;)
     (data (memory $map) (i32.const 0)  
         "1111000000000000000000000000000000000"
-        "1..10.........0.....0.....0.....0...0"
+        "1..10......g..0.....0.....0.....0...0"
         "1.............0.....0.....0.....0...0"
-        "1..10.........000.00000.00000.0000.00"
+        "1..10......r..000.00000.00000.0000.00"
         "01110...............................0"
-        "00000.........00000.0000000000.000000"
+        "00000......b..00000.0000000000.000000"
         "0.............0.........0...........0"
-        "0.............0.........0...........0"
+        "0..........y..0.........0...........0"
         "000.0G0B0R0Y0.0000000000000000.000000"
         "0...................................0"
         "0...................................0"
@@ -330,7 +347,6 @@
     (func $move_player_by_delta_xy (param $dx f32) (param $dy f32)
         (local $rotated_x f32)
         (local $rotated_y f32)
-        (local $rotated_length f32)
 
         ;; turn dx dy vector by angle
         ;; rotated_x = x * cos(angle) - y * sin(angle)
@@ -411,6 +427,197 @@
         call $move_player_by_delta_xy
         
         call $inc_frame_counter)
+    
+    (func $get_object_by_index (param $index i32) (result i32) (result f32) (result f32)
+        (local $position i32)
+        (local $type i32)
+        (local $x f32)
+        (local $y f32)
+
+        local.get $index
+        i32.const 12 ;; object size in bytes
+        i32.mul
+        local.set $position
+
+        ;; load type
+        local.get $position
+        i32.load (memory $objects)
+        local.set $type
+
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; load x
+        local.get $position
+        f32.load (memory $objects)
+        local.set $x
+
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; load y
+        local.get $position
+        f32.load (memory $objects)
+        local.set $y
+        
+        local.get $type
+        local.get $x
+        local.get $y)
+
+    (func $init_object (param $x i32) (param $y i32) (param $object i32)
+        (local $position i32)
+
+        global.get $objects_count
+        i32.const 12 ;; object size in bytes
+        i32.mul
+        local.set $position
+
+        ;; store object type
+        local.get $position
+        local.get $object
+        i32.store (memory $objects)
+        
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; store x + 0.5
+        local.get $position
+        local.get $x
+        f32.convert_i32_s
+        f32.const 0.5
+        f32.add
+        f32.store (memory $objects)
+
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; store y + 0.5
+        local.get $position
+        local.get $y
+        f32.convert_i32_s
+        f32.const 0.5
+        f32.add
+        f32.store (memory $objects)
+        
+        global.get $objects_count
+        i32.const 1
+        i32.add
+        global.set $objects_count
+        
+        ;; clear map cell, set floor tile "."
+        local.get $x
+        local.get $y
+        i32.const 46 ;; .
+        call $map_set_cell)
+
+    (func $init_cell_object (param $x i32) (param $y i32) (param $cell_object i32)
+        local.get $cell_object
+        i32.const 103 ;; "g"
+        i32.eq
+        if
+            local.get $x
+            local.get $y
+            i32.const 103
+            call $init_object
+            return
+        end
+
+        local.get $cell_object
+        i32.const 114 ;; "r"
+        i32.eq
+        if
+            local.get $x
+            local.get $y
+            i32.const 114
+            call $init_object
+            return
+        end
+
+        local.get $cell_object
+        i32.const 98 ;; "b"
+        i32.eq
+        if
+            local.get $x
+            local.get $y
+            i32.const 98
+            call $init_object
+            return
+        end
+
+        local.get $cell_object
+        i32.const 121 ;; "y"
+        i32.eq
+        if
+            local.get $x
+            local.get $y
+            i32.const 121
+            call $init_object
+            return
+        end)
+
+    (func $init_objects
+        (local $ix i32)
+        (local $iy i32)
+        (local $cell i32)
+
+        i32.const 0
+        local.set $ix
+
+        i32.const 0
+        local.set $iy
+
+        loop $loop_y
+            local.get $iy
+            global.get $map_height
+            i32.lt_u
+            if
+                ;; reset ix
+                i32.const 0
+                local.set $ix
+                
+                loop $loop_x
+                    local.get $ix
+                    global.get $map_width
+                    i32.lt_u
+
+                    if
+                        local.get $ix
+                        local.get $iy
+                        call $map_get_cell
+                        local.set $cell
+
+                        local.get $ix
+                        local.get $iy
+                        local.get $cell
+                        call $init_cell_object
+
+                        ;; ix++
+                        local.get $ix
+                        i32.const 1
+                        i32.add
+                        local.set $ix
+
+                        br $loop_x
+                    end
+                end
+
+                ;; iy++
+                local.get $iy
+                i32.const 1
+                i32.add
+                local.set $iy
+
+                br $loop_y
+            end
+        end)
 
     (func $init (param $canvas_width i32) (param $canvas_height i32)
         (local $ratio f32)
@@ -439,7 +646,21 @@
         global.get $FOV
         local.get $ratio
         f32.div
-        global.set $vertical_FOV)
+        global.set $vertical_FOV
+        
+        call $init_objects)
+
+    (func $map_set_cell (param $x i32) (param $y i32) (param $cell i32)
+        ;; cell_index = y * map_width + x
+        local.get $y
+        global.get $map_width
+        i32.mul
+        local.get $x
+        i32.add
+        
+        local.get $cell
+
+        i32.store8 (memory $map))
 
     (func $map_get_cell (param $x i32) (param $y i32) (result i32)
         ;; cell_index = y * map_width + x
@@ -549,7 +770,7 @@
         end
 
         local.get $cell
-        i32.const 82 ;; "R"
+        i32.const 66 ;; "B"
         i32.eq
         if
             call $get_sprite_door
@@ -560,7 +781,7 @@
         end
 
         local.get $cell
-        i32.const 66 ;; "B"
+        i32.const 82 ;; "R"
         i32.eq
         if
             call $get_sprite_door
@@ -582,186 +803,6 @@
         end
 
         unreachable)
-
-    (func $draw_column (param $x i32)
-        (local $iy i32)
-        (local $y_wall_start i32)
-        (local $y_wall_end i32)
-        (local $shading f32)
-        (local $angular_diameter f32)
-        (local $wall_percent_height f32)
-        (local $wall_height i32)
-        (local $wall_padding i32)
-        (local $s_width i32)
-        (local $s_height i32)
-        (local $s_pointer i32)
-        (local $s_palette i32)
-        (local $r i32)
-        (local $g i32)
-        (local $b i32)
-        (local $transparent i32)
-        (local $wall_x i32)
-        (local $intersection_fraction f32)
-        (local $tsx f32)
-        (local $tsy f32)
-
-        ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
-        global.get $player_angle_view
-        global.get $FOV
-        f32.const 2
-        f32.div
-        f32.add
-        global.get $FOV_angle_step
-        local.get $x
-        f32.convert_i32_s
-        f32.mul
-        f32.sub
-        call $get_intersection_for_angle
-        
-        global.get $intersection_is_found
-        i32.const 1
-        i32.eq
-        if ;; we have intersection, draw wall
-            global.get $intersection_cell_x
-            global.get $intersection_cell_y
-            call $get_wall_sprite_based_on_map_cell
-            local.set $tsy
-            local.set $tsx
-            local.set $s_palette
-            local.set $s_pointer
-            local.set $s_height
-            local.set $s_width
-
-            call $get_intersection_fraction
-            local.set $intersection_fraction
-
-            ;; shading = 1 - (distance / max_distance)
-            f32.const 1
-            global.get $intersection_last_near_distance
-            global.get $intersection_map_max_distance_in_lines
-            f32.convert_i32_s
-            f32.div
-            f32.sub
-            local.set $shading
-
-            ;; angular_diameter = 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
-            global.get $map_wall_height_in_meters
-            f32.const 2
-            global.get $map_cell_size_in_meters
-            f32.mul
-            global.get $intersection_last_near_distance
-            f32.mul
-            f32.div
-            call $atan
-            f32.const 2
-            f32.mul
-            local.set $angular_diameter
-
-            ;; wall_percent_height = angular_diameter / vertical_FOV
-            local.get $angular_diameter
-            global.get $vertical_FOV
-            f32.div
-            local.set $wall_percent_height
-
-            ;; wall_height = canvas_height * wall_percent_height
-            global.get $canvas_height
-            f32.convert_i32_s
-            local.get $wall_percent_height
-            f32.mul
-            i32.trunc_f32_s
-            local.set $wall_height
-
-            local.get $wall_height
-            global.get $canvas_height
-            i32.le_s
-            if
-                global.get $canvas_height
-                local.get $wall_height
-                i32.sub
-                i32.const 2
-                i32.div_s
-                local.set $y_wall_start
-
-                global.get $canvas_height
-                local.get $y_wall_start
-                i32.sub
-                local.set $y_wall_end
-
-                local.get $y_wall_start
-                local.set $wall_padding
-            else
-                i32.const 0
-                local.set $y_wall_start
-
-                global.get $canvas_height
-                local.set $y_wall_end
-
-                local.get $wall_height
-                global.get $canvas_height
-                i32.sub
-                i32.const -2
-                i32.div_s
-                local.set $wall_padding
-            end
-
-            local.get $y_wall_start
-            local.set $iy
-
-            loop $loop_y
-                local.get $iy
-                local.get $y_wall_end
-                i32.lt_u
-
-                if
-                    local.get $s_width
-                    local.get $s_height
-                    
-                    ;; x [0-1)
-                    local.get $intersection_fraction
-
-                    ;; y [0-1)
-                    local.get $iy
-                    local.get $wall_padding
-                    i32.sub
-                    f32.convert_i32_s
-                    local.get $wall_height
-                    f32.convert_i32_s
-                    f32.div
-
-                    local.get $tsx
-                    local.get $tsy
-
-                    local.get $s_palette
-                    local.get $s_pointer
-                    call $get_sprite_pixel_color
-                    local.set $transparent
-                    local.set $b
-                    local.set $g
-                    local.set $r
-
-                    local.get $transparent
-                    i32.const 0
-                    i32.eq
-                    if
-                        local.get $x
-                        local.get $iy
-                        local.get $r
-                        local.get $g
-                        local.get $b
-                        local.get $shading
-                        call $render_pixel
-                    end
-
-                    ;; iy++
-                    local.get $iy
-                    i32.const 1
-                    i32.add
-                    local.set $iy
-
-                    br $loop_y
-                end
-            end
-        end)
 
     (func $get_intersection_fraction (result f32)
         (local $r f32)
@@ -1307,6 +1348,964 @@
             call $on_intersection_found
         end)
 
+    (func $get_object_sprite_by_type (param $type i32) (result (; width ;) i32) (result (; height ;) i32) (result (; sprite pointer ;) i32) (result (; palette ;) i32)
+        local.get $type
+        i32.const 103 ;; "g"
+        i32.eq
+        if
+            call $get_sprite_key
+            i32.const 2
+            return
+        end
+
+        local.get $type
+        i32.const 114 ;; "b"
+        i32.eq
+        if
+            call $get_sprite_key
+            i32.const 3
+            return
+        end
+
+        local.get $type
+        i32.const 98 ;; "r"
+        i32.eq
+        if
+            call $get_sprite_key
+            i32.const 4
+            return
+        end
+
+        local.get $type
+        i32.const 121 ;; "y"
+        i32.eq
+        if
+            call $get_sprite_key
+            i32.const 5
+            return
+        end
+
+        unreachable)
+
+    (func $get_objects_intersected_by_index (param $index i32) (result (; type ;) i32) (result (; distance ;) f32) (result (; fraction ;) f32)
+        (local $position i32)
+        (local $type i32)
+        (local $distance f32)
+        (local $fraction f32)
+
+        local.get $index
+        i32.const 12 ;; object size in bytes
+        i32.mul
+        local.set $position
+
+        ;; load type
+        local.get $position
+        i32.load (memory $objects_intersected)
+        local.set $type
+
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; load distance
+        local.get $position
+        f32.load (memory $objects_intersected)
+        local.set $distance
+
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; load distance
+        local.get $position
+        f32.load (memory $objects_intersected)
+        local.set $fraction
+
+        local.get $type
+        local.get $distance
+        local.get $fraction)
+
+    (func $set_objects_intersected_by_index (param $index i32) (param $type i32) (param $distance f32) (param $fraction f32)
+        (local $position i32)
+
+        local.get $index
+        i32.const 12 ;; object size in bytes
+        i32.mul
+        local.set $position
+
+        ;; set type
+        local.get $position
+        local.get $type
+        i32.store (memory $objects_intersected)
+
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; set distance
+        local.get $position
+        local.get $distance
+        f32.store (memory $objects_intersected)
+        
+        local.get $position
+        i32.const 4
+        i32.add
+        local.set $position
+
+        ;; set fraction
+        local.get $position
+        local.get $fraction
+        f32.store (memory $objects_intersected))
+
+    (func $find_index_for_object_intersection_distance (param $distance f32) (result i32)
+        (local $found_index i32)
+        (local $i i32)
+        (local $i_type i32)
+        (local $i_distance f32)
+        (local $i_fraction f32)
+
+        i32.const 0
+        local.set $i
+
+        loop $loop
+            local.get $i
+            global.get $objects_intersected_count
+            i32.ge_s
+            if
+                local.get $i
+                return
+            end
+
+            local.get $i
+            call $get_objects_intersected_by_index
+            local.set $i_fraction
+            local.set $i_distance
+            local.set $i_type
+
+            local.get $distance
+            local.get $i_distance
+            f32.lt
+            if
+                local.get $i
+                return
+            end
+
+            ;; i++
+            local.get $i
+            i32.const 1
+            i32.add
+            local.set $i
+
+            br $loop
+        end
+
+        unreachable)
+
+
+    (func $move_object_intersection_items_downto_until_index (param $move_index i32)
+        (local $i i32)
+        (local $type i32)
+        (local $distance f32)
+        (local $fraction f32)
+
+        global.get $objects_intersected_count
+        local.set $i
+
+        loop $loop
+            local.get $i
+            i32.const 0
+            i32.lt_s
+            if
+                return
+            end
+
+            local.get $i
+            local.get $move_index
+            i32.lt_s
+            if
+                return
+            end
+
+            local.get $i
+            call $get_objects_intersected_by_index
+            local.set $fraction
+            local.set $distance
+            local.set $type
+
+            local.get $i
+            i32.const 1
+            i32.add
+            local.get $type
+            local.get $distance
+            local.get $fraction
+            call $set_objects_intersected_by_index
+
+            ;; i++
+            local.get $i
+            i32.const 1
+            i32.sub
+            local.set $i
+
+            br $loop
+        end
+
+        unreachable)
+
+    ;; вставим объект с типом type и дистанцией distance в массив objects_intersected
+    ;; при вставке сразу сортируем от самой ближней к дальней
+    (func $insert_to_objects_intersected (param $type i32) (param $distance f32) (param $fraction f32)
+        (local $found_index i32)
+
+        local.get $distance
+        call $find_index_for_object_intersection_distance
+        local.set $found_index
+
+        local.get $found_index
+        call $move_object_intersection_items_downto_until_index
+
+        local.get $found_index
+        local.get $type
+        local.get $distance
+        local.get $fraction
+        call $set_objects_intersected_by_index
+
+        global.get $objects_intersected_count
+        i32.const 1
+        i32.add
+        global.set $objects_intersected_count)
+
+    (func $get_intersection_with_object_for_angle (param $object_index i32) (param $angle f32)
+        (local $type i32)
+        (local $ox f32)
+        (local $oy f32)
+        (local $s_width i32)
+        (local $s_height i32)
+        (local $s_pointer i32)
+        (local $s_patelle i32)
+        ;; intersection local variables
+        (local $iy f32)
+        (local $ix f32)
+        (local $yleft f32)
+        (local $yright f32)
+        (local $ctga f32)
+        (local $tga f32)
+        (local $intersection_distance_to_object f32)
+        (local $intersection_distance_to_player f32)
+        (local $intersection_fraction f32)
+        (local $object_angle f32)
+        (local $object_angle_tmp f32)
+        (local $angle_tmp f32)
+        (local $x f32)
+        (local $y f32)
+        (local $tmp f32)
+
+        local.get $object_index
+        call $get_object_by_index
+        local.set $oy
+        local.set $ox
+        local.set $type
+
+        local.get $type
+        call $get_object_sprite_by_type
+        local.set $s_patelle
+        local.set $s_pointer
+        local.set $s_height
+        local.set $s_width
+
+
+        (;
+        нужно найти пересечение прямой проходящей через позицию объекта в заданой точке (ox, oy) и перпендикулярно углу обзора персонажа (a)
+        и прямой проходяшей через позицию позицию игрока (px, py) и параллельно углу обзора персонажа (a)
+        
+        общее уравнение прямой проходящей через точку (tx, ty) и с углом поворота (a) в радианах
+        y = tan(a) * (x - tx) + ty
+
+        так как у нас система координат перевернутая, где (y) указывает вниз, при этом 0 угла поворота это не в направлении оси (x),
+        а в направлении оси (y), то формулу надо переделать на
+        y = (tan(a) * ty - tx + x) / tan(a)
+        
+        уравнение объекта и уравнение от обзора игрока одинаковы, разница только в том, что разные точки и разный угол
+        угол у объекта будет равен углу обзора персонажа плюс PI/2
+
+        таким образом уравнение объекта, где (ox, oy) позиция объекта и (a) угол обзора игрока
+        y = (tan(a + pi/2) * oy - ox + x) / tan(a + pi/2)
+
+        и уравнение прямой от игрока в сторону обзора, где (px, py) позиция игрока и (a) угол обзора игрока
+        y = (tan(a) * py - px + x) / tan(a)
+
+        надо найти пересечние, решаем систему уравнений
+        _
+        | y = (tan(a) * py - px + x) / tan(a)
+        | y = (tan(a + pi/2) * oy - ox + x) / tan(a + pi/2)
+        -
+
+        выразим x из первого уравнения
+        x = (y - (tan(a) * ty - tx) / tan(a)) * tan(a)
+        
+        подставим во второе уравнение
+        y = (tan(a + pi/2) * oy - ox + ((y - (tan(a) * ty - tx) / tan(a)) * tan(a))) / tan(a + pi/2)
+
+        oy = q
+        ox = w
+        ty = e
+        tx = r
+        y = (tan(a + pi/2) * q - w + ((y - (tan(a) * e - r) / tan(a)) * tan(a))) / tan(a + pi/2)
+
+        надо выразить y, решил при помощи https://mathdf.com/equ/ru/
+
+        y = (ty * tan(a) + oy * ctg(a) + ox - tx) / (tan(a) + ctg(a))
+
+        найденный y подставляем в
+        x = (y - (tan(a) * py - px) / tan(a)) * tan(a)
+
+        получим (x, y) координаты пересечения прямой через позицию игрока и углом наклона (a)
+        и прямой через позицию объекта и углом наклона (a + PI / 2) тоесть перпендикулярно углу (a)
+        ;) 
+
+
+
+        (;
+        iy = (py * tan(a) + oy * ctg(a) + ox - px) / (tan(a) + ctg(a))
+
+        ctga = ctg(a)
+        tga = tan(a)
+        yleft = py * tan(a) + oy * ctg(a) + ox - px
+        yright = tan(a) + ctg(a)
+
+        iy = yleft / yright
+        ;)
+        local.get $angle
+        call $ctg
+        local.set $ctga
+
+        local.get $angle
+        call $tan
+        local.set $tga
+
+        ;; yleft = py * tan(a) + oy * ctg(a) + ox - px
+        ;; py * tan(a)
+        global.get $player_y
+        local.get $tga
+        f32.mul
+
+        ;; + oy * ctg(a)
+        local.get $oy
+        local.get $ctga
+        f32.mul
+        f32.add
+
+        ;; + ox
+        local.get $ox
+        f32.add
+
+        ;; - px
+        global.get $player_x
+        f32.sub
+        local.set $yleft
+
+        ;; yright = tan(a) + ctg(a)
+        local.get $tga
+        local.get $ctga
+        f32.add
+        local.set $yright
+
+        ;; iy = yleft / yright
+        local.get $yleft
+        local.get $yright
+        f32.div
+        local.set $iy
+
+
+        ;; ix = (y - (tan(a) * py - px) / tan(a)) * tan(a)
+        local.get $iy
+        local.get $tga
+        global.get $player_y
+        f32.mul
+        global.get $player_x
+        f32.sub
+        local.get $tga
+        f32.div
+        f32.sub
+        local.get $tga
+        f32.mul
+        local.set $ix
+
+
+        ;; надо проверить дистанцию между пересечением и позицией объекта
+        local.get $ix
+        local.get $iy
+        local.get $ox
+        local.get $oy
+        call $line_segment_distance
+        local.set $intersection_distance_to_object
+
+        ;; если дистанция от пересечения и до объекта меньше меньше заданого значения, то произошло пересечение 
+        ;; мы же проверяет наоборот что дистанция больше, и если она больше, то просто выйдем из функции
+        local.get $intersection_distance_to_object
+        f32.const 0.14 ;; магическое число, 0.14 от ширины тайла
+        f32.gt
+        if
+            return
+        end
+
+        ;; надо проверить дистанцию между пересечением и позицией персонажа
+        local.get $ix
+        local.get $iy
+        global.get $player_x
+        global.get $player_y
+        call $line_segment_distance
+        local.set $intersection_distance_to_player
+
+        ;; если подошли слишком близко, то и не надо рендерить объект
+        local.get $intersection_distance_to_player
+        f32.const 0.3
+        f32.lt
+        if
+            return
+        end
+
+        ;; если слишком далеко, то не надо рендерить объект
+        local.get $intersection_distance_to_player
+        global.get $intersection_map_max_distance_in_lines
+        f32.convert_i32_s
+        f32.gt
+        if
+            return
+        end
+
+        ;; если есть пересечение со стеной
+        global.get $intersection_is_found
+        i32.const 1
+        i32.eq
+        if
+            ;; если объект за стеной, то не рендерим
+            local.get $intersection_distance_to_player
+            global.get $intersection_last_near_distance
+            f32.gt
+            if
+                return
+            end
+        end
+
+        ;; найдем вектор в направлении от игрока в объект
+        local.get $ox
+        global.get $player_x
+        f32.sub
+        local.set $x
+
+        local.get $oy
+        global.get $player_y
+        f32.sub
+        local.set $y
+
+        ;; найдем угол от этого вектора к положительной оси y
+        local.get $y
+        
+        local.get $x
+        local.get $x
+        f32.mul
+        local.get $y
+        local.get $y
+        f32.mul
+        f32.add
+        f32.sqrt
+
+        f32.div
+        call $acos
+        local.set $object_angle
+
+        local.get $x
+        f32.const 0
+        f32.lt
+        if
+            global.get $PI
+            global.get $PI
+            f32.add
+            local.get $object_angle
+            f32.sub
+            local.set $object_angle
+        end
+
+
+        ;; при проверке пересечения с объектом, мы проверяем линией а не лучом
+        ;; это значит что пересечение будет в том числе, если стоим спиной к объекту
+        ;; не будем рендерить если пересечение позади
+        local.get $angle
+        local.get $object_angle
+        f32.sub
+        f32.abs
+        local.tee $tmp
+        global.get $PI
+        f32.const 0.8
+        f32.mul
+        f32.gt
+        if
+            local.get $tmp
+            global.get $PI
+            f32.const 1.2
+            f32.mul
+            f32.lt
+            if
+                return
+            end
+        end
+
+
+        ;; в ситуации перехода через 0 получается что вектор обзора может быть ближе к 2PI а вектор к объекту ближе к 0
+        ;; и мы не сможем правильно расчитать intersection_fraction
+        ;; для этого проверяем разницу между angle и object_angle, и если она больше PI то надо преобразовать
+        local.get $angle
+        local.get $object_angle
+        f32.sub
+        f32.abs
+        global.get $PI
+        f32.gt
+        if
+            local.get $angle
+            global.get $PI
+            f32.gt
+            if
+                local.get $angle
+                global.get $PI
+                f32.const 2
+                f32.mul
+                f32.sub
+                local.set $angle_tmp
+                local.get $object_angle
+                local.set $object_angle_tmp
+            else
+                local.get $angle
+                local.set $angle_tmp
+                local.get $object_angle
+                global.get $PI
+                f32.const 2
+                f32.mul
+                f32.sub
+                local.set $object_angle_tmp
+            end
+        else
+            local.get $angle
+            local.set $angle_tmp
+            local.get $object_angle
+            local.set $object_angle_tmp
+        end
+
+        ;; в зависимости от того, что больше, угол куда мы сейчас кастуем или угол на котором распаложен объект
+        ;; будет высчитываться intersection_fraction
+        local.get $angle_tmp
+        local.get $object_angle_tmp
+        f32.ge
+        if
+            f32.const 1
+            local.get $intersection_distance_to_object
+            f32.sub
+            f32.const 0.28 ;; магичесоке число, ширина объекта
+            f32.div
+            local.set $intersection_fraction
+        else
+            f32.const 0.14 ;; магичесоке число, половина ширины объекта
+            local.get $intersection_distance_to_object
+            f32.add
+            f32.const 0.28 ;; магичесоке число, ширина объекта
+            f32.div
+            local.set $intersection_fraction
+        end
+
+        ;; случилось пересечение, добавим его в массив пересечений
+        local.get $type
+        local.get $intersection_distance_to_player
+        local.get $intersection_fraction
+        call $insert_to_objects_intersected)
+
+    (func $clear_intersection_data
+        loop $loop
+            global.get $objects_intersected_count
+            i32.const 0
+            f32.const 0
+            f32.const 0
+            call $set_objects_intersected_by_index
+
+            global.get $objects_intersected_count
+            i32.const 0
+            i32.ne
+            if
+                ;; i++
+                global.get $objects_intersected_count
+                i32.const 1
+                i32.sub
+                global.set $objects_intersected_count
+
+                br $loop
+            end
+        end)
+    
+    (func $get_intersection_with_objects_for_angle (param $angle f32)
+        (local $i i32)
+
+        i32.const 0
+        local.set $i
+
+        call $clear_intersection_data
+
+        loop $loop
+            local.get $i
+            global.get $objects_count
+            i32.lt_u
+
+            if
+                local.get $i
+                local.get $angle
+                call $get_intersection_with_object_for_angle
+
+                ;; i++
+                local.get $i
+                i32.const 1
+                i32.add
+                local.set $i
+
+                br $loop
+            end
+        end)
+
+    (func $get_shading_for_distance (param $distance f32) (result (; shading ;) f32)
+        ;; shading = 1 - (distance / max_distance)
+        f32.const 1
+        local.get $distance
+        global.get $intersection_map_max_distance_in_lines
+        f32.convert_i32_s
+        f32.div
+        f32.sub)
+
+    (func $get_angular_diameter (param $height f32) (param $distance f32) (result (; angular_diameter ;) f32)
+        ;; angular_diameter = 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
+        local.get $height
+        f32.const 2
+        global.get $map_cell_size_in_meters
+        f32.mul
+        local.get $distance
+        f32.mul
+        f32.div
+        call $atan
+        f32.const 2
+        f32.mul)
+
+    (func $draw_column (param $x i32)
+        (local $i i32)
+        (local $iy i32)
+        (local $y_start i32)
+        (local $y_end i32)
+        (local $shading f32)
+        (local $angular_diameter f32)
+        (local $wall_percent_height f32)
+        (local $wall_height i32)
+        (local $wall_padding i32)
+        (local $s_width i32)
+        (local $s_height i32)
+        (local $s_pointer i32)
+        (local $s_palette i32)
+        (local $r i32)
+        (local $g i32)
+        (local $b i32)
+        (local $transparent i32)
+        (local $wall_x i32)
+        (local $intersection_fraction f32)
+        (local $tsx f32)
+        (local $tsy f32)
+        (local $angle f32)
+        (local $object_type i32)
+        (local $object_distance f32)
+        (local $object_percent_height f32)
+        (local $object_height i32)
+        (local $tmpi i32)
+        (local $tmp f32)
+
+        ;; angle = player_angle_view + FOV / 2 - FOV_angle_step * x
+        global.get $player_angle_view
+        global.get $FOV
+        f32.const 2
+        f32.div
+        f32.add
+        global.get $FOV_angle_step
+        local.get $x
+        f32.convert_i32_s
+        f32.mul
+        f32.sub
+        local.set $angle
+
+        local.get $angle
+        call $get_intersection_for_angle
+
+        local.get $angle
+        call $get_intersection_with_objects_for_angle
+        
+        global.get $intersection_is_found
+        i32.const 1
+        i32.eq
+        if ;; we have intersection, draw wall
+            global.get $intersection_cell_x
+            global.get $intersection_cell_y
+            call $get_wall_sprite_based_on_map_cell
+            local.set $tsy
+            local.set $tsx
+            local.set $s_palette
+            local.set $s_pointer
+            local.set $s_height
+            local.set $s_width
+
+            call $get_intersection_fraction
+            local.set $intersection_fraction
+
+            global.get $intersection_last_near_distance
+            call $get_shading_for_distance
+            local.set $shading
+
+            global.get $map_wall_height_in_meters
+            global.get $intersection_last_near_distance
+            call $get_angular_diameter
+            local.set $angular_diameter
+
+            ;; wall_percent_height = angular_diameter / vertical_FOV
+            local.get $angular_diameter
+            global.get $vertical_FOV
+            f32.div
+            local.set $wall_percent_height
+
+            ;; wall_height = canvas_height * wall_percent_height
+            global.get $canvas_height
+            f32.convert_i32_s
+            local.get $wall_percent_height
+            f32.mul
+            i32.trunc_f32_s
+            local.set $wall_height
+
+            local.get $wall_height
+            global.get $canvas_height
+            i32.le_s
+            if
+                global.get $canvas_height
+                local.get $wall_height
+                i32.sub
+                i32.const 2
+                i32.div_s
+                local.set $y_start
+
+                global.get $canvas_height
+                local.get $y_start
+                i32.sub
+                local.set $y_end
+
+                local.get $y_start
+                local.set $wall_padding
+            else
+                i32.const 0
+                local.set $y_start
+
+                global.get $canvas_height
+                local.set $y_end
+
+                local.get $wall_height
+                global.get $canvas_height
+                i32.sub
+                i32.const -2
+                i32.div_s
+                local.set $wall_padding
+            end
+
+            local.get $y_start
+            local.set $iy
+
+            loop $loop_y
+                local.get $iy
+                local.get $y_end
+                i32.lt_u
+
+                if
+                    local.get $s_width
+                    local.get $s_height
+                    
+                    ;; x [0-1)
+                    local.get $intersection_fraction
+
+                    ;; y [0-1)
+                    local.get $iy
+                    local.get $wall_padding
+                    i32.sub
+                    f32.convert_i32_s
+                    local.get $wall_height
+                    f32.convert_i32_s
+                    f32.div
+
+                    local.get $tsx
+                    local.get $tsy
+
+                    local.get $s_palette
+                    local.get $s_pointer
+                    call $get_sprite_pixel_color
+                    local.set $transparent
+                    local.set $b
+                    local.set $g
+                    local.set $r
+
+                    local.get $transparent
+                    i32.const 0
+                    i32.eq
+                    if
+                        local.get $x
+                        local.get $iy
+                        local.get $r
+                        local.get $g
+                        local.get $b
+                        local.get $shading
+                        call $render_pixel
+                    end
+
+                    ;; iy++
+                    local.get $iy
+                    i32.const 1
+                    i32.add
+                    local.set $iy
+
+                    br $loop_y
+                end
+            end
+        end
+
+        global.get $objects_intersected_count
+        i32.const 0
+        i32.ne
+        if ;; есть пересечения с объектами, рисуем их
+            global.get $objects_intersected_count
+            i32.const 1
+            i32.sub
+            local.set $i
+        
+            loop $object_loop
+                local.get $i
+                i32.const 0
+                i32.ge_s
+
+                if
+                    local.get $i
+                    call $get_objects_intersected_by_index
+                    local.set $intersection_fraction
+                    local.set $object_distance
+                    local.set $object_type
+
+                    local.get $object_type
+                    call $get_object_sprite_by_type
+                    local.set $s_palette
+                    local.set $s_pointer
+                    local.set $s_height
+                    local.set $s_width
+
+                    local.get $object_distance
+                    call $get_shading_for_distance
+                    local.set $shading
+
+                    f32.const 1.5
+                    local.get $object_distance
+                    call $get_angular_diameter
+                    local.set $angular_diameter
+
+                    ;; object_percent_height = angular_diameter / vertical_FOV
+                    local.get $angular_diameter
+                    global.get $vertical_FOV
+                    f32.div
+                    local.set $object_percent_height
+
+                    ;; object_height = canvas_height * object_percent_height
+                    global.get $canvas_height
+                    f32.convert_i32_s
+                    local.get $object_percent_height
+                    f32.mul
+                    i32.trunc_f32_s
+                    local.set $object_height
+                    
+                    global.get $canvas_height
+                    local.get $object_height
+                    i32.sub
+                    i32.const 2
+                    i32.div_s
+                    local.set $y_start
+
+                    local.get $y_start
+                    local.get $object_height
+                    i32.add
+                    local.set $y_end
+
+                    local.get $y_start
+                    local.set $iy
+
+                    loop $loop_y
+                        local.get $iy
+                        local.get $y_end
+                        i32.lt_u
+
+                        if
+                            local.get $s_width
+                            local.get $s_height
+                            
+                            ;; x [0-1)
+                            local.get $intersection_fraction
+
+                            ;; y [0-1)
+                            local.get $iy
+                            local.get $y_start
+                            i32.sub
+                            f32.convert_i32_s
+                            local.get $object_height
+                            f32.convert_i32_s
+                            f32.div
+
+                            f32.const 1
+                            f32.const 1
+
+                            local.get $s_palette
+                            local.get $s_pointer
+                            call $get_sprite_pixel_color
+                            local.set $transparent
+                            local.set $b
+                            local.set $g
+                            local.set $r
+
+                            local.get $transparent
+                            i32.const 0
+                            i32.eq
+                            if
+                                local.get $x
+                                local.get $iy
+                                local.get $r
+                                local.get $g
+                                local.get $b
+                                local.get $shading
+                                call $render_pixel
+                            end
+
+                            ;; iy++
+                            local.get $iy
+                            i32.const 1
+                            i32.add
+                            local.set $iy
+
+                            br $loop_y
+                        end
+                    end
+
+
+                    ;; i--
+                    local.get $i
+                    i32.const 1
+                    i32.sub
+                    local.set $i
+
+                    br $object_loop
+                end
+            end
+        end)
+
     (func $render
         call $render_background
         call $render_columns
@@ -1343,6 +2342,12 @@
         local.get $num
         f32.floor
         f32.sub)
+    
+    (func $ctg (param $num f32) (result f32)
+        f32.const 1
+        local.get $num
+        call $tan
+        f32.div)
     
     (func $round (param $num f32) (result f32)
         local.get $num

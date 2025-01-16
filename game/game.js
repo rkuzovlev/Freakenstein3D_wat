@@ -29,20 +29,21 @@ async function gameInit(wasmData) {
 
     const { 
         frame, 
+        objects, objects_intersected,
         map, map_width, map_height,
         render, update, init, 
         player_x, player_y,
         FOV, intersection_map_max_distance_in_lines
     } = instance.exports
     
-    console.log('memories', frame, map)
+    console.log('memories', { frame, map, objects, objects_intersected })
 
     init(GAME_WIDTH, GAME_HEIGHT)
 
     const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
 
-    let playerAngleView = Math.PI
+    let playerAngleView = Math.PI / 2
     const MAP_SIZE = map_width.value * map_height.value
     const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
     const MAP_DRAW_MULTILPLIER = 20
@@ -247,8 +248,8 @@ async function gameInit(wasmData) {
         return null
     }
 
-    function drawIntersections(intersections){
-        gameContext.fillStyle = "#0000ff"
+    function drawIntersections(intersections, color){
+        gameContext.fillStyle = color
         for (let i = 0; i < intersections.length; i++){
             const intersetion = intersections[i]
             drawIntersectionDot(intersetion.x, intersetion.y)
@@ -284,14 +285,14 @@ async function gameInit(wasmData) {
 
         drawCells()
         drawPlayer(newIntersections)
-        drawIntersections(newIntersections)
+        drawIntersections(newIntersections, "#0000ff")
 
         newIntersections = []
     }
 
     let lastFrame = performance.now()
     let w = 0, a = 0, s = 0, d = 0
-    let isDrawMap = true
+    let isDrawMap = false
     function animate(){
         const now = performance.now()
         const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
@@ -335,6 +336,8 @@ async function gameInit(wasmData) {
 
     function updatePosition(e){
         playerAngleView -= e.movementX / 500
+        playerAngleView -= Math.trunc(playerAngleView / (Math.PI * 2)) * Math.PI * 2
+        if (playerAngleView < 0) playerAngleView = Math.PI * 2 - playerAngleView
     }
 
     function lockChangeAlert() {

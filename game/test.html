@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <style>
+        #c {
+            border: 1px solid #000;
+        }
+    </style>
+
+    <script>
+        const w = 600; hw = w/2
+        const h = 600; hh = h/2
+        let mouse_x = null
+        let mouse_y = null
+
+        const c = document.getElementById("c")
+        const c2d = c.getContext('2d')
+
+        c.width = w
+        c.height = h
+
+        const px = 450
+        const py = 200
+        const ox = 200
+        const oy = 150
+        const ow = 40 // ширина обьекта
+        let oa = null // угол наклона от человека к объекту к положительной оси y от 0 до 2PI 
+        let a = null // угол наклона к положительной оси y от 0 до 2PI
+
+        const ctg = x => 1 / Math.tan(x)
+        const distance = (x, y) => Math.sqrt(x * x + y * y)
+
+        function calc(){
+            if (!mouse_x || !mouse_y) return
+
+            let x = mouse_x - px
+            let y = mouse_y - py
+            
+            a = Math.acos(y / Math.sqrt(x * x + y * y))
+            if (x < 0) a = Math.PI + Math.PI - a
+
+            x = ox - px
+            y = oy - py
+            
+            oa = Math.acos(y / Math.sqrt(x * x + y * y))
+            if (x < 0) oa = Math.PI + Math.PI - oa
+
+            console.log(a, oa)
+        }
+
+        function drawCircle(x, y, r, color) {
+            c2d.fillStyle = color
+            c2d.beginPath()
+            c2d.arc(x, y, r, 0, Math.PI * 2, true)
+            c2d.fill()
+        }
+
+        function drawLine(x1, y1, x2, y2, color) {
+            c2d.strokeStyle = color
+            c2d.beginPath()
+            c2d.moveTo(x1, y1)
+            c2d.lineTo(x2, y2)
+            c2d.stroke()
+        }
+
+        function drawPlayer(){
+            drawCircle(px, py, 5, "#ff0000")
+
+            if (!a) return
+
+            // рисуем линию через (px, py) и с углом a
+            // уровнение прямой через точку (tx, ty), и углом к положительной оси x (а)
+            // x = tg(a) * (y - ty) + tx
+            // y = (tg(a) * ty - tx + x) / tg(a)
+            if (
+                (a > Math.PI / 4 && a < Math.PI / 1.3) ||
+                (a > Math.PI * 1.3 && a < Math.PI * 1.8)
+            ){
+                // линия ближе к горизонтальной
+                // y = (tg(a) * ty - tx + x) / tg(a)
+                const x1 = 0
+                const y1 = (Math.tan(a) * py - px + x1) / Math.tan(a)
+                const x2 = h
+                const y2 = (Math.tan(a) * py - px + x2) / Math.tan(a)
+
+                drawLine(x1, y1, x2, y2, "#009900")
+            } else {
+                // линия ближе к вертикальной
+
+                // x = tg(a) * (y - ty) + tx
+                const y1 = 0
+                const x1 = Math.tan(a) * (y1 - py) + px
+                const y2 = w
+                const x2 = Math.tan(a) * (y2 - py) + px
+
+                drawLine(x1, y1, x2, y2, "#009900")
+            }
+        }
+
+        function drawObject(){
+            drawCircle(ox, oy, 5, "#0000ff")
+
+            if (a === null) return
+
+            const x1 = 0
+            const y1 = (Math.tan(a + Math.PI/2) * oy - ox + x1) / Math.tan(a + Math.PI/2)
+            const x2 = h
+            const y2 = (Math.tan(a + Math.PI/2) * oy - ox + x2) / Math.tan(a + Math.PI/2)
+
+            drawLine(x1, y1, x2, y2, "#009900")
+        }
+
+        /*
+            1) y = (tg(a) * ty - tx + x) / tg(a)
+            2) y = (tg(a + pi/2) * oy - ox + x) / tg(a + pi/2)
+
+
+            выразим х из 1
+            x = (y - (tg(a) * ty - tx) / tg(a)) * tg(a)
+            
+            и подставим в 2
+            y = (tg(a + pi/2) * oy - ox + ((y - (tg(a) * ty - tx) / tg(a)) * tg(a))) / tg(a + pi/2)
+
+
+            oy = q
+            ox = w
+            ty = e
+            tx = r
+            y = (tg(a + pi/2) * q - w + ((y - (tg(a) * e - r) / tg(a)) * tg(a))) / tg(a + pi/2)
+
+
+            y = (ty * tg(a) + oy * ctg(a) + ox - tx) / (tg(a) + ctg(a))
+        */
+
+        function drawIntersection(){
+            const y = (py * Math.tan(a) + oy * ctg(a) + ox - px) / (Math.tan(a) + ctg(a))
+            const x = (y - (Math.tan(a) * py - px) / Math.tan(a)) * Math.tan(a)
+
+            const nx = x - ox
+            const ny = y - oy
+            const d = distance (nx, ny)
+
+            let color = "#ff0000"
+            if (d < ow/2) color = "#0000ff"
+
+            drawCircle(x, y, 5, color)
+        }
+
+        function clear(){
+            c2d.fillStyle = "#fff"
+            c2d.rect(0, 0, w, h)
+            c2d.fill()
+        }
+
+        function draw(){
+            clear()
+            calc()
+            drawPlayer()
+            drawObject()
+            drawIntersection()
+            
+
+            window.requestAnimationFrame(draw)
+        }
+
+        window.requestAnimationFrame(draw)
+
+
+        function updatePosition(event) {
+            mouse_x = event.offsetX
+            mouse_y = event.offsetY
+        }
+
+        function clearPosition(){
+            mouse_x = null
+            mouse_y = null
+        }
+
+        c.addEventListener("mousemove", updatePosition, false)
+        c.addEventListener("mouseleave", clearPosition, false)
+    </script>
+</body>
+</html>
