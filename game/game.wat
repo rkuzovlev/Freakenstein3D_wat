@@ -58,6 +58,8 @@
     (global $intersection_is_found                  (mut i32) (i32.const 0))
     (global $intersection_map_max_distance_in_lines i32       (i32.const 8))
     
+    (global $end_game_appear (mut i32) (i32.const 0))
+    
     (global $have_keys (mut i32) (i32.const 0)) ;; 0b0001 - green key; 0b0010 - blue key; 0b0100 - red key; 0b1000 - yellow key
     
     (global $objects_intersected_count (mut i32) (i32.const 0)) 
@@ -443,8 +445,42 @@
         
         call $check_objects_intersection
         call $check_player_can_open_door
+        call $check_end_game_tile
         call $generate_end_game_palette
         call $inc_frame_counter)
+
+    (func $check_end_game_tile
+        (local $lx i32)
+        (local $ly i32)
+        (local $cell i32)
+
+        ;; проверим ячейку где стоит игрок
+        global.get $player_x
+        i32.trunc_f32_s
+        local.set $lx
+        
+        global.get $player_y
+        i32.trunc_f32_s
+        local.set $ly
+
+        local.get $lx
+        local.get $ly
+        call $map_get_cell
+        local.set $cell
+
+        local.get $cell
+        i32.const 101 ;; "e"
+        i32.eq
+        if
+            i32.const 1
+            global.set $end_game_appear
+
+            ;; clear map cell, set floor tile "."
+            local.get $lx
+            local.get $ly
+            i32.const 46 ;; .
+            call $map_set_cell
+        end)
 
     (func $check_player_can_open_door_in_cell (param $x f32) (param $y f32)
         (local $cell i32)
@@ -1124,7 +1160,7 @@
         i32.const 69 ;; "E"
         i32.eq
         if
-            call $get_sprite_end
+            call $get_sprite_end_door
             i32.const 6
             f32.const 1
             f32.const 1
@@ -2649,9 +2685,111 @@
         end)
 
     (func $render
-        call $render_background
-        call $render_columns
-        call $render_keys)
+        global.get $end_game_appear
+        i32.const 1
+        i32.eq
+        if
+            call $render_end_game
+        else
+            call $render_background
+            call $render_columns
+            call $render_keys
+        end)
+
+    (func $render_end_game
+        call $clear_frame
+        call $render_the_end)
+
+    (func $render_the_end
+        (local $width i32)
+        (local $height i32)
+        (local $pointer i32)
+    
+        call $get_sprite_the_end
+        local.set $pointer
+        local.set $height
+        local.set $width
+        
+        ;; x
+        global.get $canvas_width
+        i32.const 2
+        i32.div_s
+        i32.const 320
+        i32.const 2
+        i32.div_s
+        i32.sub
+        
+        ;; y
+        global.get $canvas_height
+        i32.const 2
+        i32.div_s
+        i32.const 150
+        i32.const 2
+        i32.div_s
+        i32.sub
+        
+        i32.const 320
+        i32.const 150
+        local.get $width
+        local.get $height
+        local.get $pointer
+        i32.const 0
+        call $render_sprite_on_screen)
+
+    (func $clear_frame
+        (local $ix i32)
+        (local $iy i32)
+
+        i32.const 0
+        local.set $ix
+
+        i32.const 0
+        local.set $iy
+
+        ;; loop by screen lines
+        loop $loop_y
+            local.get $iy
+            global.get $canvas_height
+            i32.lt_u
+            if
+                ;; reset ix
+                i32.const 0
+                local.set $ix
+                
+                ;; loop by pixel in line
+                loop $loop_x
+                    local.get $ix
+                    global.get $canvas_width
+                    i32.lt_u
+
+                    if
+                        local.get $ix
+                        local.get $iy
+                        i32.const 0
+                        i32.const 0
+                        i32.const 0
+                        f32.const 0
+                        call $render_pixel
+
+                        ;; ix++
+                        local.get $ix
+                        i32.const 1
+                        i32.add
+                        local.set $ix
+
+                        br $loop_x
+                    end
+                end
+
+                ;; iy++
+                local.get $iy
+                i32.const 1
+                i32.add
+                local.set $iy
+
+                br $loop_y
+            end
+        end)
 
     (func $render_columns
         (local $ix i32)
@@ -2946,43 +3084,6 @@
                 br $loop_y
             end
         end)
-
-    (func $render_crosshair
-        (local $width i32)
-        (local $height i32)
-        (local $pointer i32)
-    
-        call $get_sprite_crosshair
-        local.set $pointer
-        local.set $height
-        local.set $width
-        
-        ;; x
-        global.get $canvas_width
-        i32.const 2
-        i32.div_s
-        i32.const 12
-        i32.const 2
-        i32.div_s
-        i32.sub
-        
-        ;; y
-        global.get $canvas_height
-        i32.const 2
-        i32.div_s
-        i32.const 12
-        i32.const 2
-        i32.div_s
-        i32.sub
-        
-        i32.const 12
-        i32.const 12
-        local.get $width
-        local.get $height
-        local.get $pointer
-        i32.const 0
-        call $render_sprite_on_screen)
-
     
     (func $have_key_by_color_number (param $num i32) (result i32)
         global.get $have_keys
@@ -3363,9 +3464,9 @@
     (;SPRITES
         brick_wall.sprt
         room_wall.sprt
-        crosshair.sprt
         door.sprt
         key.sprt
-        end.sprt
+        end_door.sprt
+        the_end.sprt
     ;)
 )
