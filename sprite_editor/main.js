@@ -18,6 +18,21 @@ let imageColors = []
 let selectedColor = 0
 let isDrawing = false
 
+function randomIntFromInterval(min, max) { // min and max included 
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function generateRandomColors(){
+    for (let y = 0; y < height; y++){
+        for (let x = 0; x < width; x++){
+            imageColors[y][x] = randomIntFromInterval(1, 14)
+        }
+    }
+    updateCanvas()
+}
+
+window.generateRandomColors = generateRandomColors
+
 const colors = Array(15)
     .fill(0)
     .map((_, i) => document.getElementById(`color_${i}`))

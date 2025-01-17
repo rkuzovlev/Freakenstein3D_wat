@@ -27,23 +27,24 @@ async function gameInit(wasmData) {
     const { instance } = await WebAssembly.instantiate(wasmData, exportFunctions)
     console.log(instance)
 
-    const { 
-        frame, 
+    const {
+        frame, palettes,
         objects, objects_intersected,
         map, map_width, map_height,
         render, update, init, 
         player_x, player_y,
-        FOV, intersection_map_max_distance_in_lines
+        FOV, intersection_map_max_distance_in_lines,
+        map_is_drawing
     } = instance.exports
-    
-    console.log('memories', { frame, map, objects, objects_intersected })
+
+    console.log('memory', { frame, map, objects, objects_intersected, palettes })
 
     init(GAME_WIDTH, GAME_HEIGHT)
 
     const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
 
-    let playerAngleView = Math.PI / 2
+    let playerAngleView = 0.00001
     const MAP_SIZE = map_width.value * map_height.value
     const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
     const MAP_DRAW_MULTILPLIER = 20
@@ -290,21 +291,27 @@ async function gameInit(wasmData) {
         newIntersections = []
     }
 
-    let lastFrame = performance.now()
-    let w = 0, a = 0, s = 0, d = 0
+    
     let isDrawMap = false
-    function animate(){
-        const now = performance.now()
-        const deltaTime = ((now - lastFrame) / 1000).toFixed(4)
-        // console.log('deltaTime', deltaTime, player_x.value, player_y.value)
+    map_is_drawing.value = isDrawMap ? 1 : 0
+    
+    function mapToggle(){
+        isDrawMap = !isDrawMap
+        map_is_drawing.value = isDrawMap ? 1 : 0
+    }
+
+    let w = 0, a = 0, s = 0, d = 0
+    let lastTiming = 0
+    function animate(timing){
+        const deltaTime = ((timing - lastTiming) / 1000).toFixed(4)
         update(deltaTime, playerAngleView, a-d, w-s)
         render()
-        lastFrame = now
+        lastTiming = timing
 
-        const bufferArray = new Uint8ClampedArray(frame.buffer, 0, bufferSize)
-        const image = new ImageData(bufferArray, GAME_WIDTH, GAME_HEIGHT)
+        let bufferArray = new Uint8ClampedArray(frame.buffer, 0, bufferSize)
+        let image = new ImageData(bufferArray, GAME_WIDTH, GAME_HEIGHT)
         gameContext.putImageData(image, 0, 0)
-
+        
         if (isDrawMap) drawMap()
 
         requestAnimationFrame(animate)
@@ -317,7 +324,7 @@ async function gameInit(wasmData) {
         if (e.code === 'KeyA') a = 1
         if (e.code === 'KeyS') s = 1
         if (e.code === 'KeyD') d = 1
-        if (e.code === 'KeyM') isDrawMap = !isDrawMap
+        if (e.code === 'KeyM') mapToggle()
         if (e.code === 'Escape') document.exitPointerLock()
     })
 

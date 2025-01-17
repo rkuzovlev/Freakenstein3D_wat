@@ -7,6 +7,7 @@
     (export "map" (memory $map))
     (export "objects_intersected" (memory $objects_intersected))
     (export "objects" (memory $objects))
+    (export "palettes" (memory $palettes))
     
     (export "player_x" (global $player_x))
     (export "player_y" (global $player_y))
@@ -14,12 +15,14 @@
     (export "map_height" (global $map_height))
     (export "FOV" (global $FOV))
     (export "intersection_map_max_distance_in_lines" (global $intersection_map_max_distance_in_lines))
+    (export "map_is_drawing" (global $map_is_drawing))
 
     (import "Math" "sin" (func $sin (param f32) (result f32)))
     (import "Math" "cos" (func $cos (param f32) (result f32)))
     (import "Math" "atan" (func $atan (param f32) (result f32)))
     (import "Math" "acos" (func $acos (param f32) (result f32)))
     (import "Math" "tan" (func $tan (param f32) (result f32)))
+    (import "Math" "random" (func $random (result f32)))
     (import "Math" "PI" (global $PI f32))
     (import "common" "log" (func $log (param f32)))
     (import "common" "log" (func $logi (param i32)))
@@ -31,9 +34,9 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x                           (mut f32) (f32.const 10.5))
-    (global $player_y                           (mut f32) (f32.const 2.5))
-    (global $player_move_speed                  f32       (f32.const 1.5))
+    (global $player_x                           (mut f32) (f32.const 2.5))
+    (global $player_y                           (mut f32) (f32.const 12.5))
+    (global $player_move_speed                  f32       (f32.const 2))
     (global $player_angle_view                  (mut f32) (f32.const 0))
     (global $player_check_collision_distance    f32       (f32.const 0.35))
     
@@ -42,9 +45,10 @@
     (global $vertical_FOV           (mut f32) (f32.const 0.75))     ;; default value, need to initialize in $init function
 
     (global $map_width                  i32 (i32.const 37))
-    (global $map_height                 i32 (i32.const 15))
+    (global $map_height                 i32 (i32.const 16))
     (global $map_cell_size_in_meters    f32 (f32.const 4))
     (global $map_wall_height_in_meters  f32 (f32.const 3))
+    (global $map_is_drawing             (mut i32) (i32.const 0))
     
     (global $intersection_last_near_distance        (mut f32) (f32.const 999999))
     (global $intersection_near_x                    (mut f32) (f32.const 0))
@@ -78,6 +82,8 @@
         b (98) - blue key
         r (114)  - red key
         y (121) - yellow key
+        E (69) - end game door
+        e (101) - end game cell, remove everything
     ;)
     (data (memory $map) (i32.const 0)  
         "1111000000000000000000000000000000000"
@@ -94,7 +100,8 @@
         "0...................................0"
         "0...................................0"
         "0...................................0"
-        "0000000000000000000000000000000000000"
+        "00E0000000000000000000000000000000000"
+        "..e.................................."
     )
 
     (func $is_wall_by_x_y (param $x i32) (param $y i32) (result i32)
@@ -163,6 +170,14 @@
 
         local.get $cell
         i32.const 89 ;; "Y"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 69 ;; "E"
         i32.eq
         if
             i32.const 1
@@ -428,6 +443,7 @@
         
         call $check_objects_intersection
         call $check_player_can_open_door
+        call $generate_end_game_palette
         call $inc_frame_counter)
 
     (func $check_player_can_open_door_in_cell (param $x f32) (param $y f32)
@@ -522,6 +538,18 @@
                 
                 call $remove_yellow_key
             end
+            return
+        end
+        
+        local.get $cell
+        i32.const 69 ;; "E"
+        i32.eq
+        if
+            ;; clear map cell, set floor tile "."
+            local.get $lx
+            local.get $ly
+            i32.const 46 ;; .
+            call $map_set_cell
             return
         end)
 
@@ -1092,6 +1120,17 @@
             return
         end
 
+        local.get $cell
+        i32.const 69 ;; "E"
+        i32.eq
+        if
+            call $get_sprite_end
+            i32.const 6
+            f32.const 1
+            f32.const 1
+            return
+        end
+
         unreachable)
 
     (func $get_intersection_fraction (result f32)
@@ -1312,6 +1351,14 @@
 
                 local.get $cell
                 i32.const 89 ;; "Y"
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 69 ;; "E"
                 i32.eq
                 if
                     i32.const 1
@@ -1633,9 +1680,14 @@
         i32.const 1
         i32.eq
         if
-            global.get $intersection_near_x
-            global.get $intersection_near_y
-            call $on_intersection_found
+            global.get $map_is_drawing
+            i32.const 1
+            i32.eq
+            if
+                global.get $intersection_near_x
+                global.get $intersection_near_y
+                call $on_intersection_found
+            end
         end)
 
     (func $get_object_sprite_by_type (param $type i32) (result (; width ;) i32) (result (; height ;) i32) (result (; sprite pointer ;) i32) (result (; palette ;) i32)
@@ -3213,6 +3265,90 @@
         i32.add
         global.set $frame_counter)
 
+    (func $random_int_between (param $min i32) (param $max i32) (result i32)
+        local.get $max
+        local.get $min
+        i32.sub
+        i32.const 1
+        i32.add
+        f32.convert_i32_s
+        call $random
+        f32.mul
+        local.get $min
+        f32.convert_i32_s
+        f32.add
+        i32.trunc_f32_s)
+
+    (func $generate_end_game_palette
+        (local $i i32)
+        (local $color_index i32)
+        (local $color i32)
+
+        i32.const 90 ;; 15 colors in pallete * 6 end game palette index
+        local.set $i
+
+        loop $loop
+            local.get $i
+            i32.const 105
+            i32.ge_s
+            if
+                return
+            end
+
+            local.get $i
+            i32.const 3
+            i32.mul
+            local.set $color_index
+
+
+            ;; generate R
+            i32.const 50
+            i32.const 180
+            call $random_int_between
+            local.set $color
+
+            local.get $color_index
+            local.get $color
+            i32.store8 (memory $palettes)
+
+
+            ;; generate G
+            i32.const 50
+            i32.const 180
+            call $random_int_between
+            local.set $color
+
+            local.get $color_index
+            i32.const 1
+            i32.add
+            local.get $color
+            i32.store8 (memory $palettes)
+
+
+            ;; generate B
+            i32.const 50
+            i32.const 180
+            call $random_int_between
+            local.set $color
+
+            local.get $color_index
+            i32.const 2
+            i32.add
+            local.get $color
+            i32.store8 (memory $palettes)
+
+
+            ;; i++
+            local.get $i
+            i32.const 1
+            i32.add
+            local.set $i
+
+            br $loop
+        end
+    
+        unreachable)
+
     (memory $palettes 1)
     (data (memory $palettes) (i32.const 0)  
         (; default palette 0 ;)     "\ff\ff\ff\d3\d3\d3\78\78\78\9f\59\2d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
@@ -3221,6 +3357,7 @@
         (; blue wall and key 3 ;)   "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\30\2f\93\14\19\5c\00\11\ff\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
         (; red wall and key 4 ;)    "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\93\2f\2f\5c\14\14\ff\00\00\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
         (; yellow wall and key 5 ;) "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\ab\a0\26\5a\5b\10\ff\f7\00\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; end game palette 6 ;)    "\ff\ff\ff\ef\ef\ef\df\df\df\cf\cf\cf\bf\bf\bf\af\af\af\9f\9f\9f\8f\8f\8f\7f\7f\7f\6f\6f\6f\5f\5f\5f\ff\ff\ff\ff\ff\ff\ff\ff\ff\ff\ff\ff"
     )
 
     (;SPRITES
@@ -3229,5 +3366,6 @@
         crosshair.sprt
         door.sprt
         key.sprt
+        end.sprt
     ;)
 )
