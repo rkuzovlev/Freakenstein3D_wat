@@ -34,8 +34,8 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x                           (mut f32) (f32.const 2.5))
-    (global $player_y                           (mut f32) (f32.const 12.5))
+    (global $player_x                           (mut f32) (f32.const 33.5))
+    (global $player_y                           (mut f32) (f32.const 4.5))
     (global $player_move_speed                  f32       (f32.const 2))
     (global $player_angle_view                  (mut f32) (f32.const 0))
     (global $player_check_collision_distance    f32       (f32.const 0.35))
@@ -43,12 +43,6 @@
     (global $FOV                    f32       (f32.const 1.0))      ;; field of view between 0 and PI
     (global $FOV_angle_step         (mut f32) (f32.const 0.1))      ;; default step, need to initialize in $init function
     (global $vertical_FOV           (mut f32) (f32.const 0.75))     ;; default value, need to initialize in $init function
-
-    (global $map_width                  i32 (i32.const 37))
-    (global $map_height                 i32 (i32.const 16))
-    (global $map_cell_size_in_meters    f32 (f32.const 4))
-    (global $map_wall_height_in_meters  f32 (f32.const 3))
-    (global $map_is_drawing             (mut i32) (i32.const 0))
     
     (global $intersection_last_near_distance        (mut f32) (f32.const 999999))
     (global $intersection_near_x                    (mut f32) (f32.const 0))
@@ -106,6 +100,13 @@
         "..e.................................."
     )
 
+    (global $map_width                  i32 (i32.const 37))
+    (global $map_height                 i32 (i32.const 16))
+    (global $map_cell_size_in_meters    f32 (f32.const 4))
+    (global $map_wall_height_in_meters  f32 (f32.const 3))
+    (global $map_is_drawing             (mut i32) (i32.const 0))
+
+
     (func $is_wall_by_x_y (param $x i32) (param $y i32) (result i32)
         (local $cell i32)
 
@@ -130,7 +131,7 @@
         call $map_get_cell
         
         local.tee $cell
-        
+
         i32.const 48 ;; "0"
         i32.eq
         if
@@ -312,7 +313,7 @@
         if  ;; we moving left
             global.get $player_x
             f32.floor
-            f32.const 0.000001
+            f32.const 0.001
             f32.sub
             global.get $player_y
             call $is_player_collide_with_wall
@@ -347,7 +348,7 @@
             global.get $player_x
             global.get $player_y
             f32.floor
-            f32.const 0.000001
+            f32.const 0.001
             f32.sub
             call $is_player_collide_with_wall
             i32.const 1
