@@ -3,7 +3,7 @@ import { createCanvas, ImageData } from 'canvas'
 
 const IMAGE_WIDTH = 100
 const HEADER_SIZE = 8
-const dir = import.meta.dirname
+const dir = import.meta.dirname + "/build"
 
 async function pack(){
     const wasm = fs.readFileSync(dir + '/game.wasm')

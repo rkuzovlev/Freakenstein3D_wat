@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { createCanvas, ImageData } from 'canvas'
 
 const dir = import.meta.dirname
 
@@ -56,7 +55,7 @@ async function pack(){
 
     const wat_prepared = wat.replace(spritesRegular, newContent)
 
-    fs.writeFileSync(dir + '/game.wat_prepared', wat_prepared)
+    fs.writeFileSync(dir + '/build/game.wat_prepared', wat_prepared)
 }
 
 pack()

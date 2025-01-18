@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build_game": "node game/sprite_packer.mjs && ./node_modules/.bin/wat2wasm game/game.wat_prepared -o game/game.wasm --enable-multi-memory && node game/wasm2png.mjs",
-    "start_game": "./node_modules/.bin/http-server -p 8888 game/",
+    "clean": "rm -rf game/build",
+    "build_game": "bash build_game.sh",
+    "start_game": "./node_modules/.bin/http-server -p 8888 game/build/",
     "start_se": "./node_modules/.bin/http-server -p 8889 sprite_editor/"
   },
   "author": "",
