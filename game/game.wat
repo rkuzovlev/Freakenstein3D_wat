@@ -34,7 +34,7 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x                           (mut f32) (f32.const 33.5))
+    (global $player_x                           (mut f32) (f32.const 5.5))
     (global $player_y                           (mut f32) (f32.const 4.5))
     (global $player_move_speed                  f32       (f32.const 2))
     (global $player_angle_view                  (mut f32) (f32.const 0))
@@ -3268,97 +3268,196 @@
         call $render_sprite_on_screen)
 
     (func $render_background
-        (local $ix i32)
-        (local $iy i32)
+        (local $y i32)
+        (local $ceil_limit i32)
+        (local $floor_limit i32)
+
+        global.get $canvas_height
+        i32.const 2
+        i32.div_s
+        i32.const 20 ;; отступ
+        i32.sub
+        local.set $ceil_limit
+
+        global.get $canvas_height
+        i32.const 2
+        i32.div_s
+        i32.const 20 ;; отступ
+        i32.add
+        local.set $floor_limit
 
         i32.const 0
-        local.set $ix
+        local.set $y
 
-        i32.const 0
-        local.set $iy
+        ;; render ceil
+        loop $loop_ceil
+            local.get $y
+            local.get $ceil_limit
+            i32.le_u
+            if
+                local.get $y
+                local.get $ceil_limit
+                call $render_ceil
 
-        ;; loop by screen lines
-        loop $loop_y
-            local.get $iy
+                ;; y++
+                local.get $y
+                i32.const 1
+                i32.add
+                local.set $y
+
+                br $loop_ceil
+            end
+        end
+        
+        ;; render black center
+        loop $loop_center
+            local.get $y
+            local.get $floor_limit
+            i32.lt_u
+            if
+                local.get $y
+                call $render_center
+
+                ;; y++
+                local.get $y
+                i32.const 1
+                i32.add
+                local.set $y
+
+                br $loop_center
+            end
+        end
+
+        ;; render floor
+        loop $loop_floor
+            local.get $y
             global.get $canvas_height
             i32.lt_u
             if
-                ;; reset ix
-                i32.const 0
-                local.set $ix
-                
-                ;; loop by pixel in line
-                loop $loop_x
-                    local.get $ix
-                    global.get $canvas_width
-                    i32.lt_u
+                local.get $y
+                local.get $floor_limit
+                call $render_floor
 
-                    if
-                        local.get $ix
-                        local.get $iy
-                        call $render_background_pixel
-
-                        ;; ix++
-                        local.get $ix
-                        i32.const 1
-                        i32.add
-                        local.set $ix
-
-                        br $loop_x
-                    end
-                end
-
-                ;; iy++
-                local.get $iy
+                ;; y++
+                local.get $y
                 i32.const 1
                 i32.add
-                local.set $iy
+                local.set $y
 
-                br $loop_y
+                br $loop_floor
             end
         end)
 
-    (func $render_background_pixel (param $x i32) (param $y i32)
+    (func $render_ceil (param $y i32) (param $max i32)
+        (local $x i32)
         (local $shading f32)
 
-        ;; abs(y / canvas_height - 0.5) * 2
+        f32.const 1
         local.get $y
         f32.convert_i32_s
-        global.get $canvas_height
+        local.get $max
         f32.convert_i32_s
         f32.div
-        f32.const 0.5
         f32.sub
-        f32.abs
-        f32.const 2
-        f32.mul
         local.set $shading
 
-        ;; y < canvas_height / 2
-        local.get $y
-        global.get $canvas_height
-        i32.const 2
-        i32.div_u
+        i32.const 0
+        local.set $x
+        
+        ;; loop by pixel in line
+        loop $loop_x
+            local.get $x
+            global.get $canvas_width
+            i32.lt_u
+            if
+                local.get $x
+                local.get $y
+                i32.const 130
+                i32.const 120
+                i32.const 110
+                local.get $shading
+                call $render_pixel
 
-        i32.lt_u
-        if
-            ;; render ceil
+                ;; x++
+                local.get $x
+                i32.const 1
+                i32.add
+                local.set $x
+
+                br $loop_x
+            end
+        end)
+
+    (func $render_center (param $y i32)
+        (local $x i32)
+
+        i32.const 0
+        local.set $x
+        
+        ;; loop by pixel in line
+        loop $loop_x
             local.get $x
-            local.get $y
-            i32.const 130
-            i32.const 120
-            i32.const 110
-            local.get $shading
-            call $render_pixel
-        else
-            ;; render floor
+            global.get $canvas_width
+            i32.lt_u
+            if
+                local.get $x
+                local.get $y
+                i32.const 0
+                i32.const 0
+                i32.const 0
+                f32.const 0
+                call $render_pixel
+
+                ;; x++
+                local.get $x
+                i32.const 1
+                i32.add
+                local.set $x
+
+                br $loop_x
+            end
+        end)
+
+    (func $render_floor (param $y i32) (param $min i32)
+        (local $x i32)
+        (local $shading f32)
+
+        local.get $y
+        local.get $min
+        i32.sub
+        f32.convert_i32_s
+        global.get $canvas_width
+        local.get $min
+        i32.sub
+        f32.convert_i32_s
+        f32.div
+        local.set $shading
+
+        i32.const 0
+        local.set $x
+        
+        ;; loop by pixel in line
+        loop $loop_x
             local.get $x
-            local.get $y
-            i32.const 140
-            i32.const 100
-            i32.const 60
-            local.get $shading
-            call $render_pixel
+            global.get $canvas_width
+            i32.lt_u
+            if
+                local.get $x
+                local.get $y
+                i32.const 140
+                i32.const 100
+                i32.const 60
+                local.get $shading
+                call $render_pixel
+
+                ;; x++
+                local.get $x
+                i32.const 1
+                i32.add
+                local.set $x
+
+                br $loop_x
+            end
         end)
 
     (func $inc_frame_counter
