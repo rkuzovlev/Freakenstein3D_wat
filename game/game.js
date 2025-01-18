@@ -43,7 +43,6 @@ async function gameInit(wasmData) {
 
     const bufferSize = GAME_WIDTH * GAME_HEIGHT * 4
 
-
     let playerAngleView = Math.PI / 2
     const MAP_SIZE = map_width.value * map_height.value
     const MAP_BUFFER = new Uint8Array(map.buffer, 0, MAP_SIZE)
@@ -59,16 +58,6 @@ async function gameInit(wasmData) {
     const BLUE_DOOR_CHAR_CODE = "B".charCodeAt(0)
     const YELLOW_DOOR_CHAR_CODE = "Y".charCodeAt(0)
     const FLOOR_CHAR_CODE = ".".charCodeAt(0)
-    const WALLS = [
-        BRICK_WALL_CHAR_CODE, 
-        ROOM_WALL_CHAR_CODE,
-        SKELETON_WALL_CHAR_CODE,
-        ROCKS_WALL_CHAR_CODE,
-        GREEN_DOOR_CHAR_CODE,
-        RED_DOOR_CHAR_CODE,
-        BLUE_DOOR_CHAR_CODE,
-        YELLOW_DOOR_CHAR_CODE,
-    ]
 
     function drawWallCell(x, y, text){
         gameContext.fill()
@@ -167,94 +156,6 @@ async function gameInit(wasmData) {
         gameContext.fill()
     }
 
-    let lastNearDistance = Infinity
-    let nearX = null
-    let nearY = null
-    function checkIntersection(x, y, vx, vy){
-        // check distance of intersection
-        const dvx = x - player_x.value
-        const dvy = y - player_y.value
-        const distance = Math.sqrt(dvx*dvx + dvy*dvy)
-        const isNotTooFar = distance < MAP_MAX_LINES_INTERSECT_FIND
-        const isNearThenBefore = distance < lastNearDistance
-        const isDistanceOk = isNotTooFar && isNearThenBefore
-        
-        const checkCellX = Math.floor(x + vx / 2)
-        const checkCellY = Math.floor(y + vy / 2)
-
-        let isWall = false
-        const isCellXInRange = checkCellX >= 0 && checkCellX < map_width.value
-        const isCellYInRange = checkCellY >= 0 && checkCellY < map_height.value
-        
-        if (isCellXInRange && isCellYInRange){
-            const cellIndex = checkCellY * map_width.value + checkCellX
-            const cell = MAP_BUFFER[cellIndex]
-            isWall = WALLS.includes(cell)
-        }
-
-        if (isDistanceOk && isWall){
-            lastNearDistance = distance
-            nearX = x
-            nearY = y
-        }
-    }
-
-    const checkHorizontal = (y, vx, vy) => {
-        const x = ((y - player_y.value) * vx) / vy + player_x.value
-        checkIntersection(x, y, 0, vy)
-    }
-
-    const checkVertical = (x, vx, vy) => {
-        const y = ((x - player_x.value) * vy) / vx + player_y.value
-        checkIntersection(x, y, vx, 0)
-    }
-
-
-    function getIntersectionForAngle(angle){
-        const vx = Math.sin(angle)
-        const vy = Math.cos(angle)
-
-        lastNearDistance = Infinity
-        nearX = null
-        nearY = null
-        
-        gameContext.fillStyle = "#0000ff"
-
-        // (x - player_x.value) / vx = (y - player_y.value) / vy
-        // 
-        // for horizontal lines, we know y (y = 1, y = 2 ...)
-        if (vy < 0){ // we are lookint top
-            const yStart = Math.floor(player_y.value)
-            for (let y = yStart; y > yStart - MAP_MAX_LINES_INTERSECT_FIND; y--){
-                checkHorizontal(y, vx, vy)
-            }
-        } else { // we are lookint bottom
-            const yStart = Math.ceil(player_y.value)
-            for (let y = yStart; y < yStart + MAP_MAX_LINES_INTERSECT_FIND; y++){
-                checkHorizontal(y, vx, vy)
-            }
-        }
-        
-        // for vertical lines, we know x (x = 1, x = 2 ...)
-        if (vx > 0){ // we are looking right
-            const xStart = Math.ceil(player_x.value)
-            for (let x = xStart; x < xStart + MAP_MAX_LINES_INTERSECT_FIND; x++){
-                checkVertical(x, vx, vy)
-            }
-        } else { // we are looking left
-            const xStart = Math.floor(player_x.value)
-            for (let x = xStart; x > xStart - MAP_MAX_LINES_INTERSECT_FIND; x--){
-                checkVertical(x, vx, vy)
-            }
-        }
-
-        if (nearX !== null && nearY !== null){
-            return { x: nearX, y: nearY }
-        }
-
-        return null
-    }
-
     function drawIntersections(intersections, color){
         gameContext.fillStyle = color
         for (let i = 0; i < intersections.length; i++){
@@ -264,32 +165,6 @@ async function gameInit(wasmData) {
     }
 
     function drawMap(){
-        const intersections = []
-        // console.log(newIntersections)
-
-        // const halfFOV = FOV.value / 2
-        // const fovLeft = playerAngleView + halfFOV
-        // const fovRight = playerAngleView - halfFOV
-        // 
-        // for (let angle = fovLeft; angle > fovRight; angle -= 0.01){
-        //     const intersection = getIntersectionForAngle(angle)
-        //     if (intersection) intersections.push(intersection)
-        // }
-
-        // 2 * atan(D/(2*L)) - D размер объекта, L расстояние до объекта
-//             const intersection = getIntersectionForAngle(playerAngleView)
-//             if (intersection) {
-//                 intersections.push(intersection)
-//                 const dvx = intersection.x - player_x.value
-//                 const dvy = intersection.y - player_y.value
-//                 const distance = Math.sqrt(dvx*dvx + dvy*dvy) * 10
-//                 const angularDiameter = 2 * Math.atan(3 / (2 * distance))
-//                 const eyeAngularDiameter = 1.91986
-// 
-//                 // console.log(1 - (angularDiameter / eyeAngularDiameter))
-//             }
-        
-
         drawCells()
         drawPlayer(newIntersections)
         drawIntersections(newIntersections, "#0000ff")
