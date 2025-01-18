@@ -52,6 +52,8 @@ async function gameInit(wasmData) {
     const MAP_MAX_LINES_INTERSECT_FIND = intersection_map_max_distance_in_lines.value
     const BRICK_WALL_CHAR_CODE = "0".charCodeAt(0)
     const ROOM_WALL_CHAR_CODE = "1".charCodeAt(0)
+    const SKELETON_WALL_CHAR_CODE = "2".charCodeAt(0)
+    const ROCKS_WALL_CHAR_CODE = "3".charCodeAt(0)
     const GREEN_DOOR_CHAR_CODE = "G".charCodeAt(0)
     const RED_DOOR_CHAR_CODE = "R".charCodeAt(0)
     const BLUE_DOOR_CHAR_CODE = "B".charCodeAt(0)
@@ -60,6 +62,8 @@ async function gameInit(wasmData) {
     const WALLS = [
         BRICK_WALL_CHAR_CODE, 
         ROOM_WALL_CHAR_CODE,
+        SKELETON_WALL_CHAR_CODE,
+        ROCKS_WALL_CHAR_CODE,
         GREEN_DOOR_CHAR_CODE,
         RED_DOOR_CHAR_CODE,
         BLUE_DOOR_CHAR_CODE,
@@ -87,6 +91,8 @@ async function gameInit(wasmData) {
             case BLUE_DOOR_CHAR_CODE: drawWallCell(x, y, "B"); break
             case YELLOW_DOOR_CHAR_CODE: drawWallCell(x, y, "Y"); break
             case ROOM_WALL_CHAR_CODE: drawWallCell(x, y, "1"); break
+            case SKELETON_WALL_CHAR_CODE: drawWallCell(x, y, "2"); break
+            case ROCKS_WALL_CHAR_CODE: drawWallCell(x, y, "3"); break
             case BRICK_WALL_CHAR_CODE: drawWallCell(x, y, "0"); break
 
             case FLOOR_CHAR_CODE: {

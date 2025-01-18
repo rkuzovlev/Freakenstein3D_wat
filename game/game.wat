@@ -34,8 +34,8 @@
     (global $frame_counter (mut i32) (i32.const 0))
     (global $delta_time    (mut f32) (f32.const 0))
     
-    (global $player_x                           (mut f32) (f32.const 5.5))
-    (global $player_y                           (mut f32) (f32.const 4.5))
+    (global $player_x                           (mut f32) (f32.const 1.5))
+    (global $player_y                           (mut f32) (f32.const 1.5))
     (global $player_move_speed                  f32       (f32.const 2))
     (global $player_angle_view                  (mut f32) (f32.const 0))
     (global $player_check_collision_distance    f32       (f32.const 0.35))
@@ -69,7 +69,9 @@
     (memory $map 1)
     (;
         0 (48)  - brick wall
-        1 (49)  - room wall
+        1 (49)  - green room wall
+        2 (50)  - skeleton wall
+        3 (51)  - rocks wall
         G (71)  - green door
         B (66)  - blue door
         R (82)  - red door
@@ -79,29 +81,38 @@
         r (114)  - red key
         y (121) - yellow key
         E (69) - end game door
-        e (101) - end game cell, remove everything
+        e (101) - end game cell
     ;)
-    (data (memory $map) (i32.const 0)  
-        "1111000000000000000000000000000000000"
-        "1..10...r.g.b.y.....0.....0.....0...0"
-        "1...................0.....0.....0...0"
-        "1..10...............000.00000.0000.00"
-        "01110...............................0"
-        "00000.........00000.0000000000.000000"
-        "0.............0.........0...........0"
-        "0.............0.........0...........0"
-        "000.0G0B0R0Y0.0000000000000000.000000"
-        "0...................................0"
-        "0...................................0"
-        "0...................................0"
-        "0...................................0"
-        "0...................................0"
-        "00E0000000000000000000000000000000000"
-        "..e.................................."
+    (data (memory $map) (i32.const 0)
+        "0000000000000000000000000000000000000"
+        "0...0.G........000..........0.......0"
+        "000.0.0000.000......22..0...0000000.0"
+        "0g0...0......00000..22..0...........0"
+        "0.000.0.000000.0.0..22..00000000.0000"
+        "0.....0........0.0......0...........0"
+        "00000000000000.0.0000000000.0000000.0"
+        "333333333330...0........0.......0b..0"
+        "2..........B...00000000.0000000000000"
+        "2.........300000........0.01111111111"
+        "3333.3333333...0.000000.0...........1"
+        "3..........3...0.0......0.01.......r1"
+        "3............0.0.000.0000.01111111111"
+        "33333.33333300...0........00022222222"
+        "00003........00000.00000000003......2"
+        "0.Y.00000000.0...000.0y..00000.333333"
+        "0.0..0.....0R0.00.0..00........000000"
+        "0.0..0.................0000000......0"
+        "0.0..00000000000000000.......0......0"
+        "0.0....011111110.....0.......0.0....0"
+        "0.0....01............0.........0....0"
+        "0.0...........10.....0.......00000000"
+        "0.0....01.....10....................0"
+        "0E00000011111110000000000000000000000"
+        ".e..................................."
     )
 
     (global $map_width                  i32 (i32.const 37))
-    (global $map_height                 i32 (i32.const 16))
+    (global $map_height                 i32 (i32.const 25))
     (global $map_cell_size_in_meters    f32 (f32.const 4))
     (global $map_wall_height_in_meters  f32 (f32.const 3))
     (global $map_is_drawing             (mut i32) (i32.const 0))
@@ -141,6 +152,22 @@
 
         local.get $cell
         i32.const 49 ;; "1"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 50 ;; "2"
+        i32.eq
+        if
+            i32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 51 ;; "3"
         i32.eq
         if
             i32.const 1
@@ -1114,6 +1141,28 @@
         end
 
         local.get $cell
+        i32.const 50 ;; "2"
+        i32.eq
+        if
+            call $get_sprite_skeleton_room_wall
+            i32.const 1
+            f32.const 1
+            f32.const 1
+            return
+        end
+
+        local.get $cell
+        i32.const 51 ;; "3"
+        i32.eq
+        if
+            call $get_sprite_rocks_wall
+            i32.const 1
+            f32.const 0.1
+            f32.const 0.1
+            return
+        end
+
+        local.get $cell
         i32.const 71 ;; "G"
         i32.eq
         if
@@ -1356,6 +1405,22 @@
 
                 local.get $cell
                 i32.const 49 ;; 1
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 50 ;; 2
+                i32.eq
+                if
+                    i32.const 1
+                    local.set $is_wall
+                end
+
+                local.get $cell
+                i32.const 51 ;; 3
                 i32.eq
                 if
                     i32.const 1
@@ -3553,7 +3618,7 @@
     (memory $palettes 1)
     (data (memory $palettes) (i32.const 0)  
         (; default palette 0 ;)     "\ff\ff\ff\d3\d3\d3\78\78\78\9f\59\2d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
-        (; walls palette 1 ;)       "\78\78\78\9f\59\2d\25\5c\14\cd\c7\1d\00\00\00\bb\0a\1e\25\5c\14\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
+        (; walls palette 1 ;)       "\78\78\78\9f\59\2d\25\5c\14\cd\c7\1d\29\28\28\bb\0a\1e\30\97\8b\01\5d\52\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\5e\5e\5e"
         (; green wall and key 2 ;)  "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\32\93\2f\25\5c\14\00\ff\11\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
         (; blue wall and key 3 ;)   "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\30\2f\93\14\19\5c\00\11\ff\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
         (; red wall and key 4 ;)    "\ff\ff\ff\d3\d3\d3\a0\a0\a0\68\68\68\00\00\00\93\2f\2f\5c\14\14\ff\00\00\9d\91\01\28\72\33\64\24\24\3e\5f\8a\ea\e6\ca\3b\d6\bf\ea\5e\e0"
@@ -3568,5 +3633,7 @@
         key.sprt
         end_door.sprt
         the_end.sprt
+        skeleton_room_wall.sprt
+        rocks_wall.sprt
     ;)
 )
