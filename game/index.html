@@ -8,10 +8,20 @@
 <body>
     <canvas id="game"></canvas>
     <img id="i" src="./game.png">
+    <div id="not_supported">
+        Your browser is not supported, because i'm using multy-memory wasm feature<br />
+        please use Chrome based browser instead
+    </div>
 
     <style>
         body {
             background-color: #f0f0f0;
+        }
+
+        #not_supported {
+            display: none;
+            font-size: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"
         }
     </style>
 

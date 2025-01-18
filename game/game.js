@@ -1,6 +1,7 @@
 const GAME_WIDTH = 800
 const GAME_HEIGHT = 600
 
+const notSupported = window.not_supported
 const gameCanvas = window.game
 const gameContext = gameCanvas.getContext('2d')
 const body = document.body
@@ -24,7 +25,17 @@ async function gameInit(wasmData) {
         Math
     }
 
-    const { instance } = await WebAssembly.instantiate(wasmData, exportFunctions)
+    let wasm
+    try {
+        wasm = await WebAssembly.instantiate(wasmData, exportFunctions)
+    } catch (e) {
+        notSupported.style.display = "block"
+        gameCanvas.style.display = "none"
+        console.log(e)
+        return
+    }
+
+    const { instance } = wasm
     console.log(instance)
 
     const {
